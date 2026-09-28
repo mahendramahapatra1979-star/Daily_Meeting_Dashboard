@@ -47,7 +47,7 @@
         .sticky-table-wrapper table { margin-top: 0; border: none; }
         .sticky-table-wrapper th { position: sticky; top: 0; z-index: 5; box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4); }
         .sticky-table-wrapper thead tr:nth-child(1) th { top: 0; }
-        .sticky-table-wrapper thead tr:nth-child(2) th { top: 41px; } /* Adjust based on exact row height if needed */
+        .sticky-table-wrapper thead tr:nth-child(2) th { top: 41px; } 
         .sticky-table-wrapper thead tr:nth-child(3) th { top: 82px; border-bottom: 3px solid #000; }
 
         .bg-gray-header { background-color: #d1d5db !important; }
@@ -75,7 +75,7 @@
         .admin-section { display: none; background: white; padding: 20px; border-radius: 0 5px 5px 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .admin-section.active { display: block; }
 
-        .auth-grid th, .auth-grid td { font-size: 11px; padding: 4px; border: 1px solid #ccc; }
+        .auth-grid th, .auth-grid td { font-size: 11px; padding: 4px; border: 1px solid #ccc; white-space: nowrap; }
         .auth-grid th { background-color: #e5e7eb; }
         .auth-sub-th { font-size: 10px; }
         
@@ -262,6 +262,7 @@
 
             <div id="admin-auth" class="admin-section">
                 <h3 class="text-lg font-bold mb-4 text-gray-800">User Authorization Grid</h3>
+                <p class="text-xs text-gray-600 mb-4">Tick the departments each user is allowed to access and edit. New departments added in Configuration will appear here automatically.</p>
                 <div class="flex gap-4 mb-4 items-end bg-gray-50 p-4 border rounded">
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-1">Filter User</label>
@@ -280,17 +281,11 @@
                 <div id="auth-grid-container" class="hidden overflow-x-auto border rounded bg-white shadow-sm">
                     <table class="auth-grid w-full min-w-max">
                         <thead>
-                            <tr>
-                                <th rowspan="2" class="w-1/4">Sections (Modules)</th>
-                                <th colspan="11" class="border-l-2 border-gray-400 text-blue-800">Bldg #3</th>
-                                <th colspan="11" class="border-l-2 border-gray-400 text-green-800">Bldg #5</th>
-                            </tr>
-                            <tr>
-                                <th class="auth-sub-th border-l-2 border-gray-400">QC</th><th class="auth-sub-th">GRN</th><th class="auth-sub-th">PUTAWAY</th><th class="auth-sub-th">CLAIMS</th><th class="auth-sub-th">REFIN</th><th class="auth-sub-th text-purple-600">RTV</th><th class="auth-sub-th text-purple-600">CYCLE</th><th class="auth-sub-th text-purple-600">FWD</th><th class="auth-sub-th text-purple-600">M2M</th><th class="auth-sub-th text-pink-600">PHOTO</th><th class="auth-sub-th text-blue-600">OTHER</th>
-                                <th class="auth-sub-th border-l-2 border-gray-400">QC</th><th class="auth-sub-th">GRN</th><th class="auth-sub-th">PUTAWAY</th><th class="auth-sub-th">CLAIMS</th><th class="auth-sub-th">REFIN</th><th class="auth-sub-th text-purple-600">RTV</th><th class="auth-sub-th text-purple-600">CYCLE</th><th class="auth-sub-th text-purple-600">FWD</th><th class="auth-sub-th text-purple-600">M2M</th><th class="auth-sub-th text-pink-600">PHOTO</th><th class="auth-sub-th text-blue-600">OTHER</th>
-                            </tr>
+                            <!-- Populated dynamically via JS -->
                         </thead>
-                        <tbody id="auth-grid-body"></tbody>
+                        <tbody id="auth-grid-body">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
                     </table>
                     <div class="m-4">
                         <button onclick="saveUserAuthGrid()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded shadow">Save Authorizations</button>
@@ -713,25 +708,33 @@
             return [];
         }
 
+        // Helper to format dynamic departments
+        function getBaseDeptName(deptName) {
+            if(!deptName) return '';
+            let d = deptName.toUpperCase().trim();
+            d = d.replace(/-0?3$/, '').replace(/-0?5$/, '').trim(); 
+            d = d.replace(/\sBLDG-?0?[35]$/, '').trim(); 
+            return d;
+        }
+
         // ================= GLOBAL DATA STRUCTURES (DYNAMIC) =================
         
         let targetDepts = [];
         let pendencyDepts = [];
         
-        const defaultTargetDepts = ["QC", "GRN-3", "GRN-5", "PUTAWAY-3", "PUTAWAY-5", "CYCLE COUNT", "FORWARD BLDG-03", "FORWARD BLDG-05", "TAG CHANGE", "RTV - PICK", "RTV - PACK", "PHOTOSHOOT", "CLAIMS", "REFINISHING", "OTHER_BRAND", "NEW-MANPOWER", "AJIO SCAN", "CATALOUGE", "QC CHECK", "M2M"];
-        const defaultPendencyDepts = ["QC", "GRN", "PUTAWAY", "CLAIMS", "REFINISHING", "RTV", "CYCLE COUNT", "FORWARD", "M2M", "OTHER BRAND"];
+        const defaultTargetDepts = ["QC", "GRN-3", "GRN-5", "PUTAWAY-3", "PUTAWAY-5", "CYCLE COUNT", "FORWARD BLDG-03", "FORWARD BLDG-05", "TAG CHANGE", "RTV - PICK", "RTV - PACK", "PHOTOSHOOT", "CLAIMS", "REFINISHING", "AJIO SCAN", "CATALOUGE", "QC CHECK", "M2M"];
+        const defaultPendencyDepts = ["QC", "GRN", "PUTAWAY", "CLAIMS", "REFINISHING", "RTV", "CYCLE COUNT", "FORWARD", "M2M"];
 
         const defaultManpowerConfig = [
-            { id: 'qc', name: 'QC Department', authCat: ['QC'], tasks: ["Returns", "OBD", "Bin Movement", "Shippmet Scanning", "Stock Feeder", "Stock Collector", "Shoe Box Maker", "Helper", "Trainee", "Product Mismatch", "NRF"] },
-            { id: 'fwd', name: 'Forward Building', authCat: ['FWD'], tasks: ["Picker", "Packer", "Sorting", "Manifest", "Tag_loop", "Tag_loop Mapping", "Helper/Movement", "MRP Printing", "Ajio", "Handover", "Trainee", "LIFT"] },
-            { id: 'grn', name: 'GRN', authCat: ['GRN'], tasks: ["GRN", "Putaway", "Status Change", "Bin Change", "5S", "QC Checking", "Sorting", "Helper / Other Activities", "Piece Picking", "Belt Folding / Suit Cover", "Product Mismatch", "Movement / Unloading", "Trainee", "Cycle Count"] },
-            { id: 'putaway', name: 'Putaway', authCat: ['PUTAWAY'], tasks: ["GRN", "Putaway", "Status Change", "Bin Change", "5S", "QC Checking", "Sorting", "Helper / Other Activities", "Piece Picking", "Belt Folding / Suit Cover", "Product Mismatch", "Movement / Unloading", "Trainee", "Cycle Count"] },
-            { id: 'rtv', name: 'RTV', authCat: ['RTV'], tasks: ["Picker", "Packer", "Helper", "Dispatch", "M2M", "Cycle Count"] },
-            { id: 'claims', name: 'Claims', authCat: ['CLAIMS'], tasks: ["Claims", "Follow Up", "Training", "Photo Helper", "ND / DD"] },
-            { id: 'refinish', name: 'Refinishing', authCat: ['REFIN'], tasks: ["Refinishing Work", "Helper"] },
-            { id: 'photo', name: 'Photo Shoot', authCat: ['PHOTO'], tasks: ["Photo Shoot", "Catalogue"] },
-            { id: 'tag', name: 'Tag Change', authCat: ['OTHER'], tasks: ["Tag Change"] },
-            { id: 'other_brand', name: 'Other Brand', authCat: ['OTHER'], tasks: ["Other Brand/ Debranding"] }
+            { id: 'qc', name: 'QC Department', tasks: ["Returns", "OBD", "Bin Movement", "Shippmet Scanning", "Stock Feeder", "Stock Collector", "Shoe Box Maker", "Helper", "Trainee", "Product Mismatch", "NRF"] },
+            { id: 'fwd', name: 'Forward Building', tasks: ["Picker", "Packer", "Sorting", "Manifest", "Tag_loop", "Tag_loop Mapping", "Helper/Movement", "MRP Printing", "Ajio", "Handover", "Trainee", "LIFT"] },
+            { id: 'grn', name: 'GRN', tasks: ["GRN", "Putaway", "Status Change", "Bin Change", "5S", "QC Checking", "Sorting", "Helper / Other Activities", "Piece Picking", "Belt Folding / Suit Cover", "Product Mismatch", "Movement / Unloading", "Trainee", "Cycle Count"] },
+            { id: 'putaway', name: 'Putaway', tasks: ["GRN", "Putaway", "Status Change", "Bin Change", "5S", "QC Checking", "Sorting", "Helper / Other Activities", "Piece Picking", "Belt Folding / Suit Cover", "Product Mismatch", "Movement / Unloading", "Trainee", "Cycle Count"] },
+            { id: 'rtv', name: 'RTV', tasks: ["Picker", "Packer", "Helper", "Dispatch", "M2M", "Cycle Count"] },
+            { id: 'claims', name: 'Claims', tasks: ["Claims", "Follow Up", "Training", "Photo Helper", "ND / DD"] },
+            { id: 'refinish', name: 'Refinishing', tasks: ["Refinishing Work", "Helper"] },
+            { id: 'photo', name: 'Photo Shoot', tasks: ["Photo Shoot", "Catalogue"] },
+            { id: 'tag', name: 'Tag Change', tasks: ["Tag Change"] }
         ];
 
         let manpowerConfig = [];
@@ -740,7 +743,6 @@
         let draftPendencyDepts = [];
         let reportEmails = [];
         
-        // Track state specifically to rebuild tables
         let lastTargetConfigStr = '';
         let lastPendencyConfigStr = '';
         let lastManpowerConfigStr = '';
@@ -757,10 +759,16 @@
             { id: 'user-dept-pendency', name: 'Dept. Pendency (Data Entry)', category: 'USER', dataKey: 'dept-pendency' },
             { id: 'user-manpower', name: 'Manpower Detail Entry', category: 'USER', dataKey: 'manpower' }
         ];
-        
-        const subCols = ["QC", "GRN", "PUTAWAY", "CLAIMS", "REFIN", "RTV", "CYCLE", "FWD", "M2M", "PHOTO", "OTHER"];
 
-        // UI Controls Admin Array
+        function getDynamicSubCols() {
+            let s = new Set();
+            targetDepts.forEach(d => s.add(getBaseDeptName(d)));
+            pendencyDepts.forEach(d => s.add(getBaseDeptName(d)));
+            manpowerConfig.forEach(d => s.add(getBaseDeptName(d.name)));
+            let cols = Array.from(s).filter(x => x !== 'TOTAL');
+            return cols.sort();
+        }
+
         const uiControlsList = [
             { id: 'link-file-upload', label: 'Sidebar: File Upload Section' },
             { id: 'link-dashboard', label: 'Sidebar: Dashboard Section' },
@@ -1225,8 +1233,6 @@
                 else if (dn === "PHOTOSHOOT") val = calcDept('photo', 'both', ['Catalogue']);
                 else if (dn === "CLAIMS") val = calcDept('claims');
                 else if (dn === "REFINISHING") val = calcDept('refinish');
-                else if (dn === "OTHER BRAND" || dn === "OTHER_BRAND") val = calcDept('other_brand');
-                else if (dn === "NEW-MANPOWER") val = 0;
                 else if (dn === "AJIO SCAN") val = calcTask(['Ajio']);
                 else if (dn === "CATALOUGE" || dn === "CATALOGUE") val = calcTask(['Catalogue']);
                 else if (dn === "QC CHECK") val = calcTask(['QC Checking']);
@@ -1285,7 +1291,6 @@
                     if(rawMp && !rawMp.some(d => d.id === 'grn_put')) {
                         manpowerConfig = ensureArray(rawMp);
                         manpowerConfig.forEach(dept => {
-                            dept.authCat = ensureArray(dept.authCat);
                             dept.tasks = ensureArray(dept.tasks);
                         });
                     }
@@ -1351,7 +1356,6 @@
             if(rawMp) {
                 manpowerConfig = ensureArray(rawMp);
                 manpowerConfig.forEach(dept => {
-                    dept.authCat = ensureArray(dept.authCat);
                     dept.tasks = ensureArray(dept.tasks);
                 });
             } else {
@@ -1985,8 +1989,13 @@
             
             buildTargetTables();
             buildPendencyTables();
+            
+            // Update auth grid to show new columns
+            buildAuthGrid();
+            loadUserAuthGrid();
+            
             try { if(currentDateStr) checkFormLocks(); } catch(e){}
-            renderDeptConfigUI(); // Re-render to clear out removed blanks
+            renderDeptConfigUI(); 
         }
 
         // ================= TASK MANAGEMENT =================
@@ -2003,11 +2012,7 @@
                         <input type="text" class="border p-1 font-bold text-gray-800 w-2/3" value="${dept.name}" onchange="draftTasks[${dIdx}].name = this.value">
                         <button type="button" onclick="removeDraftDept(${dIdx})" class="text-red-500 font-bold text-xs bg-red-50 px-2 py-1 rounded hover:bg-red-100">Delete Dept</button>
                     </div>
-                    <div class="mb-3 text-xs text-gray-600 flex items-center">
-                        <span class="mr-2">Auth Map:</span> 
-                        <input type="text" class="border p-1 flex-grow outline-none focus:border-blue-500 text-purple-700 font-bold" value="${ensureArray(dept.authCat).join(', ')}" onchange="draftTasks[${dIdx}].authCat = this.value.split(',').map(s=>s.trim())">
-                    </div>
-                    <ul class="list-none pl-0 max-h-48 overflow-y-auto mb-2 border-t pt-2">`;
+                    <ul class="list-none pl-0 max-h-48 overflow-y-auto mb-2 border-t pt-2 mt-2">`;
                 ensureArray(dept.tasks).forEach((task, tIdx) => {
                     html += `<li class="mb-1 flex items-center gap-2">
                         <input type="text" class="border p-1 text-xs flex-grow outline-none focus:border-blue-500" value="${task}" onchange="draftTasks[${dIdx}].tasks[${tIdx}] = this.value">
@@ -2021,7 +2026,7 @@
             if(document.getElementById('admin-tasks-container')) document.getElementById('admin-tasks-container').innerHTML = html;
         }
 
-        function addDraftDept() { draftTasks.push({ id: 'dept_'+Date.now(), name: 'New Department', authCat: ['OTHER'], tasks: ['New Task'] }); renderTaskSetup(); }
+        function addDraftDept() { draftTasks.push({ id: 'dept_'+Date.now(), name: 'New Department', tasks: ['New Task'] }); renderTaskSetup(); }
         function removeDraftDept(dIdx) { if(confirm('Delete entire department?')) { draftTasks.splice(dIdx, 1); renderTaskSetup(); } }
         function addDraftTask(dIdx) { draftTasks[dIdx].tasks.push('New Task'); renderTaskSetup(); }
         function removeDraftTask(dIdx, tIdx) { draftTasks[dIdx].tasks.splice(tIdx, 1); renderTaskSetup(); }
@@ -2037,6 +2042,8 @@
             setTimeout(() => { document.getElementById('task-save-msg').classList.add('hidden'); document.getElementById('task-save-msg').style.display = 'none';}, 2000);
             
             buildManpowerTables(); 
+            buildAuthGrid();
+            loadUserAuthGrid();
             try { if(currentDateStr) checkFormLocks(); } catch(e){}
         }
 
@@ -2132,6 +2139,7 @@
                 renderAdminUsers();
                 loadAdminModulesList();
                 renderUIControls();
+                buildAuthGrid();
             } else { alert("Incorrect Admin Password!"); }
         }
 
@@ -2212,6 +2220,9 @@
                 initDeptConfig();
             } else if (tabId === 'admin-tasks') {
                 initTaskSetup();
+            } else if (tabId === 'admin-auth') {
+                buildAuthGrid();
+                loadUserAuthGrid();
             }
         }
 
@@ -2297,15 +2308,37 @@
         
         function buildAuthGrid() {
             const section = document.getElementById('auth-section-select').value;
+            const thead = document.querySelector('.auth-grid thead');
             const tbody = document.getElementById('auth-grid-body');
-            if(!tbody) return;
+            if(!tbody || !thead) return;
+            
+            const dynamicCols = getDynamicSubCols();
+            
+            // Rebuild Header Dynamically
+            let theadHtml = `
+                <tr>
+                    <th rowspan="2" class="w-1/4">Sections (Modules)</th>
+                    <th colspan="${dynamicCols.length}" class="border-l-2 border-gray-400 text-blue-800">Bldg #3</th>
+                    <th colspan="${dynamicCols.length}" class="border-l-2 border-gray-400 text-green-800">Bldg #5</th>
+                </tr><tr>`;
+            
+            dynamicCols.forEach((col, idx) => {
+                theadHtml += `<th class="auth-sub-th ${idx===0?'border-l-2 border-gray-400':''}">${col}</th>`;
+            });
+            dynamicCols.forEach((col, idx) => {
+                theadHtml += `<th class="auth-sub-th ${idx===0?'border-l-2 border-gray-400':''}">${col}</th>`;
+            });
+            theadHtml += `</tr>`;
+            thead.innerHTML = theadHtml;
+
+            // Rebuild Body Dynamically
             let html = '';
             const filteredModules = sidebarModules.filter(mod => mod.category === section && mod.id !== 'dashboard-section' && mod.id !== 'data-file-upload');
             
             filteredModules.forEach(mod => {
                 html += `<tr><td class="font-bold border-r-2 border-gray-400 bg-gray-50 text-xs">${mod.name.replace(' (Data Entry)', '').replace(' (MIS View)', '')}</td>`;
-                subCols.forEach(sc => { html += `<td class="text-center ${sc==='QC'?'border-l-2 border-gray-400':''}"><input type="checkbox" class="auth-cb" data-mod="${mod.id}" data-bldg="Bldg3" data-sub="${sc}"></td>`; });
-                subCols.forEach(sc => { html += `<td class="text-center ${sc==='QC'?'border-l-2 border-gray-400':''}"><input type="checkbox" class="auth-cb" data-mod="${mod.id}" data-bldg="Bldg5" data-sub="${sc}"></td>`; });
+                dynamicCols.forEach((sc, idx) => { html += `<td class="text-center ${idx===0?'border-l-2 border-gray-400':''}"><input type="checkbox" class="auth-cb" data-mod="${mod.id}" data-bldg="Bldg3" data-sub="${sc}"></td>`; });
+                dynamicCols.forEach((sc, idx) => { html += `<td class="text-center ${idx===0?'border-l-2 border-gray-400':''}"><input type="checkbox" class="auth-cb" data-mod="${mod.id}" data-bldg="Bldg5" data-sub="${sc}"></td>`; });
                 html += `</tr>`;
             });
             tbody.innerHTML = html;
@@ -2369,7 +2402,26 @@
             ];
 
             adminManagementModules.forEach(mod => {
-                const isLocked = localStorage.getItem(`lock_${mod.dataKey}_${dateVal}`);
+                // Check if any locks exist for this module/date combination
+                let isLocked = false;
+                
+                if (mod.dataKey === 'target-board') {
+                    const lA = localStorage.getItem(`lock_target-board_${dateVal}_achieve`);
+                    const lT = localStorage.getItem(`lock_target-board_${dateVal}_target`);
+                    isLocked = (lA && lA !== "{}" && lA !== "0") || (lT && lT !== "{}" && lT !== "0");
+                } else {
+                    const lockStr = localStorage.getItem(`lock_${mod.dataKey}_${dateVal}`);
+                    if(lockStr) {
+                        if(lockStr === "1") isLocked = true;
+                        else {
+                            try {
+                                const lObj = JSON.parse(lockStr);
+                                if(Object.keys(lObj).length > 0) isLocked = true;
+                            } catch(e) { isLocked = true; } 
+                        }
+                    }
+                }
+                
                 const statusBadge = isLocked ? `<span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">Locked (Saved)</span>` : `<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Active (Open)</span>`;
                 const btnActivate = isLocked ? `<button onclick="adminActivateModule('${mod.dataKey}', '${dateVal}')" class="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold py-1 px-3 rounded shadow transition">Activate (Unlock)</button>` : '';
                 
@@ -2540,21 +2592,6 @@
                 group.style.display = 'none';
                 icon.style.transform = 'rotate(0deg)';
             }
-        }
-
-        function getTargetSubCategory(deptName) {
-            const d = deptName.toUpperCase();
-            if(d.includes("QC")) return "QC";
-            if(d.includes("GRN")) return "GRN";
-            if(d.includes("PUTAWAY")) return "PUTAWAY";
-            if(d.includes("CLAIMS")) return "CLAIMS";
-            if(d.includes("REFIN")) return "REFIN";
-            if(d.includes("RTV")) return "RTV";
-            if(d.includes("CYCLE")) return "CYCLE";
-            if(d.includes("FORWARD") || d.includes("FWD")) return "FWD";
-            if(d.includes("M2M")) return "M2M";
-            if(d.includes("PHOTO")) return "PHOTO";
-            return "OTHER";
         }
 
         function hasPerm(mod, bldg, subCat) {
@@ -2771,7 +2808,7 @@
                         if (isSuperAdmin) { 
                             b3Auth = true; b5Auth = true; 
                         } else {
-                            const subCat = getTargetSubCategory(deptName);
+                            const subCat = getBaseDeptName(deptName);
                             b3Auth = hasPerm('target-board', 'Bldg3', subCat);
                             b5Auth = hasPerm('target-board', 'Bldg5', subCat);
                         }
@@ -2801,8 +2838,8 @@
             const aData = aDate ? JSON.parse(localStorage.getItem(`data_target-board_${aDate}`)) || {} : {};
             const tData = tDate ? JSON.parse(localStorage.getItem(`data_target-board_${tDate}`)) || {} : {};
 
-            const aLocked = aDate ? localStorage.getItem(`lock_target-board_${aDate}_achieve`) : false;
-            const tLocked = tDate ? localStorage.getItem(`lock_target-board_${tDate}_target`) : false;
+            const aLocks = aDate ? JSON.parse(localStorage.getItem(`lock_target-board_${aDate}_achieve`)) || {} : {};
+            const tLocks = tDate ? JSON.parse(localStorage.getItem(`lock_target-board_${tDate}_target`)) || {} : {};
 
             const userTbody = document.getElementById('user-target-tbody');
             if(userTbody) {
@@ -2822,7 +2859,7 @@
                         if (isSuperAdmin) { 
                             b3Auth = true; b5Auth = true; 
                         } else {
-                            const subCat = getTargetSubCategory(deptName);
+                            const subCat = getBaseDeptName(deptName);
                             b3Auth = hasPerm('user-data-entry', 'Bldg3', subCat);
                             b5Auth = hasPerm('user-data-entry', 'Bldg5', subCat);
                         }
@@ -2834,11 +2871,11 @@
                         } else {
                             tr.style.display = '';
                             if(achInput) {
-                                if(aLocked || !aDate) { achInput.readOnly = true; achInput.classList.add('locked-input'); }
+                                if(aLocks[deptName] || !aDate) { achInput.readOnly = true; achInput.classList.add('locked-input'); }
                                 else { achInput.readOnly = false; achInput.classList.remove('locked-input'); }
                             }
                             if(tgtInput) {
-                                if(tLocked || !tDate) { tgtInput.readOnly = true; tgtInput.classList.add('locked-input'); }
+                                if(tLocks[deptName] || !tDate) { tgtInput.readOnly = true; tgtInput.classList.add('locked-input'); }
                                 else { tgtInput.readOnly = false; tgtInput.classList.remove('locked-input'); }
                             }
                         }
@@ -2847,14 +2884,14 @@
             }
 
             const btnSaveAchieve = document.getElementById('btn-save-achieve');
-            if (btnSaveAchieve) btnSaveAchieve.disabled = aLocked || !aDate || !isUI('btn-save-target');
+            if (btnSaveAchieve) btnSaveAchieve.disabled = !aDate || !isUI('btn-save-target');
             
             const btnSaveTargetBtn = document.getElementById('btn-save-target');
-            if (btnSaveTargetBtn) btnSaveTargetBtn.disabled = tLocked || !tDate || !isUI('btn-save-target');
+            if (btnSaveTargetBtn) btnSaveTargetBtn.disabled = !tDate || !isUI('btn-save-target');
 
             // ================= DEPT PENDENCY =================
             const penData = JSON.parse(localStorage.getItem(`data_dept-pendency_${currentDateStr}`)) || {};
-            const penLocked = localStorage.getItem(`lock_dept-pendency_${currentDateStr}`);
+            const penLocks = JSON.parse(localStorage.getItem(`lock_dept-pendency_${currentDateStr}`)) || {};
 
             const misPenTbody = document.getElementById('mis-pendency-tbody');
             if(misPenTbody) {
@@ -2877,7 +2914,7 @@
                         if (isSuperAdmin) { 
                             b3Auth = true; b5Auth = true; 
                         } else {
-                            const subCat = getTargetSubCategory(deptName);
+                            const subCat = getBaseDeptName(deptName);
                             b3Auth = hasPerm('mis-dept-pendency', 'Bldg3', subCat);
                             b5Auth = hasPerm('mis-dept-pendency', 'Bldg5', subCat);
                         }
@@ -2888,11 +2925,9 @@
             }
 
             const btnSavePen = document.getElementById('btn-save-pendency');
-            if(btnSavePen) btnSavePen.disabled = penLocked || !isUI('btn-save-pendency');
+            if(btnSavePen) btnSavePen.disabled = !currentDateStr || !isUI('btn-save-pendency');
             const alertPenSuc = document.getElementById('alert-pendency-success');
             if(alertPenSuc) alertPenSuc.style.display = 'none';
-            const alertPenErr = document.getElementById('alert-pendency-error');
-            if(alertPenErr) alertPenErr.style.display = penLocked ? 'block' : 'none';
 
             const userPenTbody = document.getElementById('user-pendency-tbody');
             if(userPenTbody) {
@@ -2906,7 +2941,7 @@
                         if (isSuperAdmin) { 
                             b3Auth = true; b5Auth = true; 
                         } else {
-                            const subCat = getTargetSubCategory(deptName);
+                            const subCat = getBaseDeptName(deptName);
                             b3Auth = hasPerm('user-dept-pendency', 'Bldg3', subCat);
                             b5Auth = hasPerm('user-dept-pendency', 'Bldg5', subCat);
                         }
@@ -2914,17 +2949,23 @@
                         const inB3 = document.getElementById(`user-pen-b3-${i}`);
                         const inB5 = document.getElementById(`user-pen-b5-${i}`);
                         
-                        if(inB3) { inB3.value = penData[`b3_${i}`] || ''; inB3.readOnly = true; inB3.classList.add('locked-input'); }
-                        if(inB5) { inB5.value = penData[`b5_${i}`] || ''; inB5.readOnly = true; inB5.classList.add('locked-input'); }
+                        if(inB3) { inB3.value = penData[`b3_${i}`] || ''; }
+                        if(inB5) { inB5.value = penData[`b5_${i}`] || ''; }
                         try { calcUserPendencyTotal(i); } catch(e){}
 
                         if(!b3Auth && !b5Auth) {
                             tr.style.display = 'none';
                         } else {
                             tr.style.display = ''; 
-                            if(!penLocked) {
+                            if(penLocks[deptName] || !currentDateStr) {
+                                if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
+                                if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
+                            } else {
                                 if(b3Auth && inB3) { inB3.readOnly = false; inB3.classList.remove('locked-input'); } 
+                                else if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
+
                                 if(b5Auth && inB5) { inB5.readOnly = false; inB5.classList.remove('locked-input'); } 
+                                else if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
                             }
                         }
                     } catch(e){}
@@ -2933,16 +2974,18 @@
 
             // ================= MANPOWER DASHBOARD =================
             const mpData = JSON.parse(localStorage.getItem(`data_manpower_${currentDateStr}`)) || {};
-            const mpLocked = localStorage.getItem(`lock_manpower_${currentDateStr}`);
+            const mpLocks = JSON.parse(localStorage.getItem(`lock_manpower_${currentDateStr}`)) || {};
 
             manpowerConfig.forEach((dept, dIdx) => {
                 let misB3Auth = false, misB5Auth = false;
+                const subCat = getBaseDeptName(dept.name);
+
                 if (isSuperAdmin) { 
                     misB3Auth = true; misB5Auth = true; 
                 } else {
                     try {
-                        misB3Auth = ensureArray(dept.authCat).some(cat => hasPerm('mis-manpower', 'Bldg3', cat));
-                        misB5Auth = ensureArray(dept.authCat).some(cat => hasPerm('mis-manpower', 'Bldg5', cat));
+                        misB3Auth = hasPerm('mis-manpower', 'Bldg3', subCat);
+                        misB5Auth = hasPerm('mis-manpower', 'Bldg5', subCat);
                     } catch(e){}
                 }
                 const misCard = document.getElementById(`mis-mp-card-${dIdx}`);
@@ -2956,8 +2999,8 @@
                     usrB3Auth = true; usrB5Auth = true; 
                 } else {
                     try {
-                        usrB3Auth = ensureArray(dept.authCat).some(cat => hasPerm('user-manpower', 'Bldg3', cat));
-                        usrB5Auth = ensureArray(dept.authCat).some(cat => hasPerm('user-manpower', 'Bldg5', cat));
+                        usrB3Auth = hasPerm('user-manpower', 'Bldg3', subCat);
+                        usrB5Auth = hasPerm('user-manpower', 'Bldg5', subCat);
                     } catch(e){}
                 }
                 const userCard = document.getElementById(`user-mp-card-${dIdx}`);
@@ -2984,12 +3027,18 @@
                         const inB3 = document.getElementById(`user-mp-b3-${dIdx}-${tIdx}`);
                         const inB5 = document.getElementById(`user-mp-b5-${dIdx}-${tIdx}`);
                         
-                        if(inB3) { inB3.value = v3; inB3.readOnly = true; inB3.classList.add('locked-input'); }
-                        if(inB5) { inB5.value = v5; inB5.readOnly = true; inB5.classList.add('locked-input'); }
+                        if(inB3) { inB3.value = v3; }
+                        if(inB5) { inB5.value = v5; }
 
-                        if(!mpLocked) {
+                        if(mpLocks[dept.name] || !currentDateStr) {
+                            if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
+                            if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
+                        } else {
                             if(usrB3Auth && inB3) { inB3.readOnly = false; inB3.classList.remove('locked-input'); } 
+                            else if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
+                            
                             if(usrB5Auth && inB5) { inB5.readOnly = false; inB5.classList.remove('locked-input'); } 
+                            else if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
                         }
                     } catch(e){}
                 });
@@ -3004,10 +3053,8 @@
 
             const alertMpSuc = document.getElementById('alert-manpower-success');
             if(alertMpSuc) alertMpSuc.style.display = 'none';
-            const alertMpErr = document.getElementById('alert-manpower-error');
-            if(alertMpErr) alertMpErr.style.display = mpLocked ? 'block' : 'none';
             const btnSaveMp = document.getElementById('btn-save-manpower');
-            if(btnSaveMp) btnSaveMp.disabled = mpLocked || !isUI('btn-save-manpower');
+            if(btnSaveMp) btnSaveMp.disabled = !currentDateStr || !isUI('btn-save-manpower');
             
             updateTargetManpower();
         }
@@ -3023,20 +3070,24 @@
             }
             
             let data = JSON.parse(localStorage.getItem(`data_target-board_${dateStr}`)) || {};
+            let locks = JSON.parse(localStorage.getItem(`lock_target-board_${dateStr}_${type}`)) || {};
             let hasData = false;
 
             targetDepts.forEach((dept, i) => {
                 const input = document.getElementById(`${type}-${i}`);
                 if (input && !input.readOnly && !input.disabled && input.closest('tr').style.display !== 'none') {
-                    if (!data[i]) data[i] = { target: '', achieve: '' };
-                    data[i][type] = input.value;
-                    if(input.value.trim() !== '') hasData = true;
+                    if(input.value.trim() !== '') {
+                        if (!data[i]) data[i] = { target: '', achieve: '' };
+                        data[i][type] = input.value;
+                        locks[dept] = true;
+                        hasData = true;
+                    }
                 }
             });
 
             if(hasData) {
                 saveToDB(`data_target-board_${dateStr}`, JSON.stringify(data));
-                saveToDB(`lock_target-board_${dateStr}_${type}`, "1");
+                saveToDB(`lock_target-board_${dateStr}_${type}`, JSON.stringify(locks));
                 
                 const alertBox = document.getElementById(`alert-${type}-success`);
                 if(alertBox) {
@@ -3053,21 +3104,27 @@
             e.preventDefault();
             let hasData = false;
             let data = JSON.parse(localStorage.getItem(`data_dept-pendency_${currentDateStr}`)) || {};
+            let locks = JSON.parse(localStorage.getItem(`lock_dept-pendency_${currentDateStr}`)) || {};
             
-            pendencyDepts.forEach((_, i) => {
+            pendencyDepts.forEach((dept, i) => {
                 const inB3 = document.getElementById(`user-pen-b3-${i}`);
                 const inB5 = document.getElementById(`user-pen-b5-${i}`);
+                let rowSaved = false;
+
                 if(inB3 && !inB3.readOnly && !inB3.disabled && inB3.closest('tr').style.display !== 'none') { 
-                    data[`b3_${i}`] = inB3.value; if(inB3.value.trim() !== '') hasData=true; 
+                    if(inB3.value.trim() !== '') { data[`b3_${i}`] = inB3.value; hasData=true; rowSaved=true; }
                 }
                 if(inB5 && !inB5.readOnly && !inB5.disabled && inB5.closest('tr').style.display !== 'none') { 
-                    data[`b5_${i}`] = inB5.value; if(inB5.value.trim() !== '') hasData=true; 
+                    if(inB5.value.trim() !== '') { data[`b5_${i}`] = inB5.value; hasData=true; rowSaved=true; }
                 }
+                
+                if (rowSaved) locks[dept] = true;
             });
+            
             if(!hasData) { alert("You don't have authorization or cannot save empty data!"); return; }
 
             saveToDB(`data_dept-pendency_${currentDateStr}`, JSON.stringify(data));
-            saveToDB(`lock_dept-pendency_${currentDateStr}`, "1");
+            saveToDB(`lock_dept-pendency_${currentDateStr}`, JSON.stringify(locks));
             const alertBox = document.getElementById('alert-pendency-success');
             if(alertBox) {
                 alertBox.style.display = 'block';
@@ -3080,24 +3137,31 @@
             e.preventDefault();
             let hasData = false;
             let data = JSON.parse(localStorage.getItem(`data_manpower_${currentDateStr}`)) || {};
+            let locks = JSON.parse(localStorage.getItem(`lock_manpower_${currentDateStr}`)) || {};
 
             manpowerConfig.forEach((dept, dIdx) => {
+                let deptSaved = false;
                 ensureArray(dept.tasks).forEach((task, tIdx) => {
                     const inB3 = document.getElementById(`user-mp-b3-${dIdx}-${tIdx}`);
                     const inB5 = document.getElementById(`user-mp-b5-${dIdx}-${tIdx}`);
                     const card = document.getElementById(`user-mp-card-${dIdx}`);
                     
                     if(card && card.style.display !== 'none') {
-                        if(inB3 && !inB3.readOnly && !inB3.disabled) { data[`b3_${dIdx}_${tIdx}`] = inB3.value; if(inB3.value.trim() !== '') hasData=true; }
-                        if(inB5 && !inB5.readOnly && !inB5.disabled) { data[`b5_${dIdx}_${tIdx}`] = inB5.value; if(inB5.value.trim() !== '') hasData=true; }
+                        if(inB3 && !inB3.readOnly && !inB3.disabled) { 
+                            if(inB3.value.trim() !== '') { data[`b3_${dIdx}_${tIdx}`] = inB3.value; hasData=true; deptSaved = true; }
+                        }
+                        if(inB5 && !inB5.readOnly && !inB5.disabled) { 
+                            if(inB5.value.trim() !== '') { data[`b5_${dIdx}_${tIdx}`] = inB5.value; hasData=true; deptSaved = true; }
+                        }
                     }
                 });
+                if (deptSaved) locks[dept.name] = true;
             });
 
             if(!hasData) { alert("You don't have authorization or cannot save empty data!"); return; }
             
             saveToDB(`data_manpower_${currentDateStr}`, JSON.stringify(data));
-            saveToDB(`lock_manpower_${currentDateStr}`, "1");
+            saveToDB(`lock_manpower_${currentDateStr}`, JSON.stringify(locks));
             const alertBox = document.getElementById('alert-manpower-success');
             if(alertBox) {
                 alertBox.style.display = 'block';
