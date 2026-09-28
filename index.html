@@ -78,6 +78,7 @@
         .auth-grid th, .auth-grid td { font-size: 11px; padding: 4px; border: 1px solid #ccc; white-space: nowrap; }
         .auth-grid th { background-color: #e5e7eb; }
         .auth-sub-th { font-size: 10px; }
+        .auth-module-col { max-width: 150px; white-space: normal; word-wrap: break-word; } 
         
         .sidebar-heading { padding: 15px 20px; font-size: 13px; font-weight: bold; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; border-top: 1px solid #374151; cursor: pointer; transition: color 0.2s, background-color 0.2s; display: flex; justify-content: space-between; align-items: center; }
         .sidebar-heading:hover { color: #ffffff; background-color: #374151; }
@@ -2365,17 +2366,17 @@
             const dynamicCols = getDynamicSubCols();
             
             // Rebuild Header Dynamically for Bldg 3
-            let bldg3HeadHtml = `<tr><th class="whitespace-nowrap px-4 py-2 border-r-2 border-gray-400">Sections (Modules)</th>`;
+            let bldg3HeadHtml = `<tr><th class="whitespace-nowrap px-4 py-2 border-r-2 border-gray-400" style="width: 200px;">Sections (Modules)</th>`;
             dynamicCols.forEach((col, idx) => {
-                bldg3HeadHtml += `<th class="auth-sub-th ${idx===0?'border-l-2 border-gray-400':''}">${col}</th>`;
+                bldg3HeadHtml += `<th class="auth-sub-th px-2 ${idx===0?'border-l-2 border-gray-400':''}">${col}</th>`;
             });
             bldg3HeadHtml += `</tr>`;
             bldg3Head.innerHTML = bldg3HeadHtml;
 
             // Rebuild Header Dynamically for Bldg 5
-            let bldg5HeadHtml = `<tr><th class="whitespace-nowrap px-4 py-2 border-r-2 border-gray-400">Sections (Modules)</th>`;
+            let bldg5HeadHtml = `<tr><th class="whitespace-nowrap px-4 py-2 border-r-2 border-gray-400" style="width: 200px;">Sections (Modules)</th>`;
             dynamicCols.forEach((col, idx) => {
-                bldg5HeadHtml += `<th class="auth-sub-th ${idx===0?'border-l-2 border-gray-400':''}">${col}</th>`;
+                bldg5HeadHtml += `<th class="auth-sub-th px-2 ${idx===0?'border-l-2 border-gray-400':''}">${col}</th>`;
             });
             bldg5HeadHtml += `</tr>`;
             bldg5Head.innerHTML = bldg5HeadHtml;
@@ -2388,12 +2389,12 @@
             filteredModules.forEach(mod => {
                 const modName = mod.name.replace(' (Data Entry)', '').replace(' (MIS View)', '');
                 
-                bldg3Html += `<tr><td class="font-bold border-r-2 border-gray-400 bg-gray-50 text-xs px-4 whitespace-nowrap">${modName}</td>`;
-                dynamicCols.forEach((sc, idx) => { bldg3Html += `<td class="text-center ${idx===0?'border-l-2 border-gray-400':''}"><input type="checkbox" class="auth-cb" data-mod="${mod.id}" data-bldg="Bldg3" data-sub="${sc}"></td>`; });
+                bldg3Html += `<tr><td class="font-bold border-r-2 border-gray-400 bg-gray-50 text-xs px-4 whitespace-nowrap" style="width: 200px;">${modName}</td>`;
+                dynamicCols.forEach((sc, idx) => { bldg3Html += `<td class="text-center px-2 ${idx===0?'border-l-2 border-gray-400':''}"><input type="checkbox" class="auth-cb" data-mod="${mod.id}" data-bldg="Bldg3" data-sub="${sc}"></td>`; });
                 bldg3Html += `</tr>`;
 
-                bldg5Html += `<tr><td class="font-bold border-r-2 border-gray-400 bg-gray-50 text-xs px-4 whitespace-nowrap">${modName}</td>`;
-                dynamicCols.forEach((sc, idx) => { bldg5Html += `<td class="text-center ${idx===0?'border-l-2 border-gray-400':''}"><input type="checkbox" class="auth-cb" data-mod="${mod.id}" data-bldg="Bldg5" data-sub="${sc}"></td>`; });
+                bldg5Html += `<tr><td class="font-bold border-r-2 border-gray-400 bg-gray-50 text-xs px-4 whitespace-nowrap" style="width: 200px;">${modName}</td>`;
+                dynamicCols.forEach((sc, idx) => { bldg5Html += `<td class="text-center px-2 ${idx===0?'border-l-2 border-gray-400':''}"><input type="checkbox" class="auth-cb" data-mod="${mod.id}" data-bldg="Bldg5" data-sub="${sc}"></td>`; });
                 bldg5Html += `</tr>`;
             });
             
