@@ -717,6 +717,11 @@
         let draftPendencyDepts = [];
         let reportEmails = [];
         
+        // Track state specifically to rebuild tables
+        let lastTargetConfigStr = '';
+        let lastPendencyConfigStr = '';
+        let lastManpowerConfigStr = '';
+
         const sidebarModules = [
             { id: 'data-file-upload', name: 'File Upload Section', category: 'MIS', dataKey: 'data-file-upload' },
             { id: 'target-board', name: 'Target Dash Board', category: 'MIS', dataKey: 'target-board' },
@@ -1181,7 +1186,7 @@
             let grandTotal = 0;
             targetDepts.forEach((deptName, i) => {
                 let val = null;
-                const dn = deptName.toUpperCase();
+                const dn = deptName.toUpperCase().trim();
                 
                 if (dn === "QC") val = calcDept('qc');
                 else if (dn === "GRN-3") val = calcDept('grn', 'b3', ['Cycle Count', 'QC Checking']);
@@ -1197,10 +1202,10 @@
                 else if (dn === "PHOTOSHOOT") val = calcDept('photo', 'both', ['Catalogue']);
                 else if (dn === "CLAIMS") val = calcDept('claims');
                 else if (dn === "REFINISHING") val = calcDept('refinish');
-                else if (dn === "OTHER_BRAND") val = calcDept('other_brand');
+                else if (dn === "OTHER BRAND" || dn === "OTHER_BRAND") val = calcDept('other_brand');
                 else if (dn === "NEW-MANPOWER") val = 0;
                 else if (dn === "AJIO SCAN") val = calcTask(['Ajio']);
-                else if (dn === "CATALOUGE") val = calcTask(['Catalogue']);
+                else if (dn === "CATALOUGE" || dn === "CATALOGUE") val = calcTask(['Catalogue']);
                 else if (dn === "QC CHECK") val = calcTask(['QC Checking']);
                 else if (dn === "M2M") val = calcTask(['M2M']);
                 else val = 0; // Default generic mapping for newly added rows
@@ -1253,6 +1258,15 @@
                     if (rTd) targetDepts = ensureArray(rTd);
                     if (rPd) pendencyDepts = ensureArray(rPd);
                     
+                    let rawMp = JSON.parse(localStorage.getItem('manpower_config'));
+                    if(rawMp && !rawMp.some(d => d.id === 'grn_put')) {
+                        manpowerConfig = ensureArray(rawMp);
+                        manpowerConfig.forEach(dept => {
+                            dept.authCat = ensureArray(dept.authCat);
+                            dept.tasks = ensureArray(dept.tasks);
+                        });
+                    }
+
                     wmsUsers = ensureArray(JSON.parse(localStorage.getItem('wms_users')));
                     populateLoginUsers();
                     
@@ -1261,10 +1275,29 @@
                         renderUIControls();
                     }
 
+                    // ENSURE DOM TABLES ARE REBUILT IF LIVE LAYOUT CONFIGURATION HAS CHANGED
+                    let layoutChanged = false;
+                    if (JSON.stringify(targetDepts) !== lastTargetConfigStr) {
+                        lastTargetConfigStr = JSON.stringify(targetDepts);
+                        buildTargetTables();
+                        layoutChanged = true;
+                    }
+                    if (JSON.stringify(pendencyDepts) !== lastPendencyConfigStr) {
+                        lastPendencyConfigStr = JSON.stringify(pendencyDepts);
+                        buildPendencyTables();
+                        layoutChanged = true;
+                    }
+                    if (JSON.stringify(manpowerConfig) !== lastManpowerConfigStr) {
+                        lastManpowerConfigStr = JSON.stringify(manpowerConfig);
+                        buildManpowerTables();
+                        layoutChanged = true;
+                    }
+
                     if (document.getElementById('admin-container').style.display !== 'none') {
                         renderAdminUsers();
                         loadAdminModulesList();
                     }
+                    
                     if (document.getElementById('app-container').style.display !== 'none') {
                         try { handleDateChange(); checkFormLocks(); } catch(e) {}
                     }
@@ -1305,6 +1338,11 @@
             reportEmails = ensureArray(JSON.parse(localStorage.getItem('wms_report_emails')));
             wmsUsers = ensureArray(JSON.parse(localStorage.getItem('wms_users')));
             uiControlsState = JSON.parse(localStorage.getItem('ui_controls_config')) || {};
+
+            // Initialize global state strings to track layout sync changes
+            lastTargetConfigStr = JSON.stringify(targetDepts);
+            lastPendencyConfigStr = JSON.stringify(pendencyDepts);
+            lastManpowerConfigStr = JSON.stringify(manpowerConfig);
 
             buildManpowerTables();
 
@@ -1858,6 +1896,19 @@
         }
 
         // ================= ADMIN DYNAMIC DEPTS CONFIG =================
+        
+        function syncDeptDrafts() {
+            const targetInputs = document.querySelectorAll('#admin-target-depts-list input[type="text"]');
+            if(targetInputs.length > 0) {
+                draftTargetDepts = Array.from(targetInputs).map(inp => inp.value.trim());
+            }
+
+            const pendencyInputs = document.querySelectorAll('#admin-pendency-depts-list input[type="text"]');
+            if(pendencyInputs.length > 0) {
+                draftPendencyDepts = Array.from(pendencyInputs).map(inp => inp.value.trim());
+            }
+        }
+
         function initDeptConfig() {
             draftTargetDepts = [...targetDepts];
             draftPendencyDepts = [...pendencyDepts];
@@ -1868,7 +1919,7 @@
             let tHtml = '';
             draftTargetDepts.forEach((d, i) => {
                 tHtml += `<li class="mb-2 flex items-center gap-2">
-                    <input type="text" class="border p-2 text-sm flex-grow outline-none focus:border-blue-500 rounded font-semibold text-gray-700" value="${d}" onchange="draftTargetDepts[${i}] = this.value">
+                    <input type="text" class="border p-2 text-sm flex-grow outline-none focus:border-blue-500 rounded font-semibold text-gray-700" value="${d}">
                     <button type="button" onclick="removeTargetDept(${i})" class="text-red-500 font-bold px-3 py-1 bg-red-50 hover:bg-red-100 rounded border border-red-200">X</button>
                 </li>`;
             });
@@ -1877,24 +1928,33 @@
             let pHtml = '';
             draftPendencyDepts.forEach((d, i) => {
                 pHtml += `<li class="mb-2 flex items-center gap-2">
-                    <input type="text" class="border p-2 text-sm flex-grow outline-none focus:border-green-500 rounded font-semibold text-gray-700" value="${d}" onchange="draftPendencyDepts[${i}] = this.value">
+                    <input type="text" class="border p-2 text-sm flex-grow outline-none focus:border-green-500 rounded font-semibold text-gray-700" value="${d}">
                     <button type="button" onclick="removePendencyDept(${i})" class="text-red-500 font-bold px-3 py-1 bg-red-50 hover:bg-red-100 rounded border border-red-200">X</button>
                 </li>`;
             });
             document.getElementById('admin-pendency-depts-list').innerHTML = pHtml;
         }
 
-        function addTargetDept() { draftTargetDepts.push("NEW DEPARTMENT"); renderDeptConfigUI(); }
-        function removeTargetDept(i) { draftTargetDepts.splice(i, 1); renderDeptConfigUI(); }
-        function addPendencyDept() { draftPendencyDepts.push("NEW DEPARTMENT"); renderDeptConfigUI(); }
-        function removePendencyDept(i) { draftPendencyDepts.splice(i, 1); renderDeptConfigUI(); }
+        function addTargetDept() { syncDeptDrafts(); draftTargetDepts.push("NEW DEPARTMENT"); renderDeptConfigUI(); }
+        function removeTargetDept(i) { syncDeptDrafts(); draftTargetDepts.splice(i, 1); renderDeptConfigUI(); }
+        function addPendencyDept() { syncDeptDrafts(); draftPendencyDepts.push("NEW DEPARTMENT"); renderDeptConfigUI(); }
+        function removePendencyDept(i) { syncDeptDrafts(); draftPendencyDepts.splice(i, 1); renderDeptConfigUI(); }
 
         function saveDashboardDepts() {
+            syncDeptDrafts();
+            
+            // Filter out empty rows
+            draftTargetDepts = draftTargetDepts.filter(v => v !== '');
+            draftPendencyDepts = draftPendencyDepts.filter(v => v !== '');
+
             targetDepts = [...draftTargetDepts];
             pendencyDepts = [...draftPendencyDepts];
             
-            saveToDB('target_depts_config', JSON.stringify(targetDepts));
-            saveToDB('pendency_depts_config', JSON.stringify(pendencyDepts));
+            lastTargetConfigStr = JSON.stringify(targetDepts);
+            lastPendencyConfigStr = JSON.stringify(pendencyDepts);
+
+            saveToDB('target_depts_config', lastTargetConfigStr);
+            saveToDB('pendency_depts_config', lastPendencyConfigStr);
             
             document.getElementById('dept-save-msg').classList.remove('hidden');
             document.getElementById('dept-save-msg').style.display = 'inline-flex';
@@ -1903,6 +1963,7 @@
             buildTargetTables();
             buildPendencyTables();
             try { if(currentDateStr) checkFormLocks(); } catch(e){}
+            renderDeptConfigUI(); // Re-render to clear out removed blanks
         }
 
         // ================= TASK MANAGEMENT =================
@@ -1944,7 +2005,10 @@
         
         function saveAdminTasks() {
             manpowerConfig = JSON.parse(JSON.stringify(draftTasks));
-            saveToDB('manpower_config', JSON.stringify(manpowerConfig));
+            lastManpowerConfigStr = JSON.stringify(manpowerConfig);
+            
+            saveToDB('manpower_config', lastManpowerConfigStr);
+            
             document.getElementById('task-save-msg').classList.remove('hidden');
             document.getElementById('task-save-msg').style.display = 'inline-flex';
             setTimeout(() => { document.getElementById('task-save-msg').classList.add('hidden'); document.getElementById('task-save-msg').style.display = 'none';}, 2000);
@@ -2120,6 +2184,12 @@
             document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
             event.currentTarget.classList.add('active');
             document.getElementById(tabId).classList.add('active');
+            
+            if (tabId === 'admin-dept-config') {
+                initDeptConfig();
+            } else if (tabId === 'admin-tasks') {
+                initTaskSetup();
+            }
         }
 
         function jumpToModuleFromAdmin(modId) {
@@ -2440,7 +2510,7 @@
             if(d.includes("REFIN")) return "REFIN";
             if(d.includes("RTV")) return "RTV";
             if(d.includes("CYCLE")) return "CYCLE";
-            if(d.includes("FORWARD")) return "FWD";
+            if(d.includes("FORWARD") || d.includes("FWD")) return "FWD";
             if(d.includes("M2M")) return "M2M";
             if(d.includes("PHOTO")) return "PHOTO";
             return "OTHER";
@@ -2663,6 +2733,13 @@
                             const subCat = getTargetSubCategory(deptName);
                             b3Auth = hasPerm('target-board', 'Bldg3', subCat);
                             b5Auth = hasPerm('target-board', 'Bldg5', subCat);
+                            
+                            // FALLBACK: Auto-show custom departments if user has ANY module permission
+                            if (subCat === "OTHER" && !b3Auth && !b5Auth) {
+                                if (userPermissions['target-board'] && (ensureArray(userPermissions['target-board']['Bldg3']).length > 0 || ensureArray(userPermissions['target-board']['Bldg5']).length > 0)) {
+                                    b3Auth = true; b5Auth = true;
+                                }
+                            }
                         }
                         if (deptName.includes("3") || deptName.includes("03")) b5Auth = false;
                         if (deptName.includes("5") || deptName.includes("05")) b3Auth = false;
@@ -2714,6 +2791,13 @@
                             const subCat = getTargetSubCategory(deptName);
                             b3Auth = hasPerm('user-data-entry', 'Bldg3', subCat);
                             b5Auth = hasPerm('user-data-entry', 'Bldg5', subCat);
+                            
+                            // FALLBACK: Auto-show custom departments if user has ANY module permission
+                            if (subCat === "OTHER" && !b3Auth && !b5Auth) {
+                                if (userPermissions['user-data-entry'] && (ensureArray(userPermissions['user-data-entry']['Bldg3']).length > 0 || ensureArray(userPermissions['user-data-entry']['Bldg5']).length > 0)) {
+                                    b3Auth = true; b5Auth = true;
+                                }
+                            }
                         }
                         if (deptName.includes("3") || deptName.includes("03")) b5Auth = false;
                         if (deptName.includes("5") || deptName.includes("05")) b3Auth = false;
@@ -2766,6 +2850,13 @@
                             const subCat = getTargetSubCategory(deptName);
                             b3Auth = hasPerm('mis-dept-pendency', 'Bldg3', subCat);
                             b5Auth = hasPerm('mis-dept-pendency', 'Bldg5', subCat);
+                            
+                            // FALLBACK: Auto-show custom departments if user has ANY module permission
+                            if (subCat === "OTHER" && !b3Auth && !b5Auth) {
+                                if (userPermissions['mis-dept-pendency'] && (ensureArray(userPermissions['mis-dept-pendency']['Bldg3']).length > 0 || ensureArray(userPermissions['mis-dept-pendency']['Bldg5']).length > 0)) {
+                                    b3Auth = true; b5Auth = true;
+                                }
+                            }
                         }
                         if(!b3Auth && !b5Auth) tr.style.display = 'none';
                         else tr.style.display = '';
@@ -2795,6 +2886,13 @@
                             const subCat = getTargetSubCategory(deptName);
                             b3Auth = hasPerm('user-dept-pendency', 'Bldg3', subCat);
                             b5Auth = hasPerm('user-dept-pendency', 'Bldg5', subCat);
+                            
+                            // FALLBACK: Auto-show custom departments if user has ANY module permission
+                            if (subCat === "OTHER" && !b3Auth && !b5Auth) {
+                                if (userPermissions['user-dept-pendency'] && (ensureArray(userPermissions['user-dept-pendency']['Bldg3']).length > 0 || ensureArray(userPermissions['user-dept-pendency']['Bldg5']).length > 0)) {
+                                    b3Auth = true; b5Auth = true;
+                                }
+                            }
                         }
                         
                         const inB3 = document.getElementById(`user-pen-b3-${i}`);
