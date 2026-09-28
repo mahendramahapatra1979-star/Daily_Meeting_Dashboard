@@ -1,0 +1,3028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warehouse Operations Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase Compat SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+
+    <!-- EmailJS SDK (Kept for compatibility, but email now drafts manually via mailto) -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script type="text/javascript">
+        // YAHAN APNI PUBLIC KEY DALEIN (EmailJS > Account > Public Key)
+        emailjs.init("YOUR_PUBLIC_KEY"); 
+    </script>
+
+    <style>
+        .hidden { display: none; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        #sidebar { transition: margin-left 0.3s ease; width: 250px; flex-shrink: 0; background-color: #1f2937; color: white; height: 100vh; overflow-y: auto; }
+        #sidebar.hidden-sidebar { margin-left: -250px; }
+        .menu-item { padding: 10px 20px; padding-left: 30px; cursor: pointer; border-bottom: 1px solid #374151; transition: background 0.2s; font-size: 14px; }
+        .menu-item:hover { background-color: #374151; }
+        .menu-item.active { background-color: #2563eb; font-weight: bold; color: white; }
+        
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+        #topbar { background-color: white; padding: 15px 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); z-index: 10; }
+        .toggle-btn { font-size: 24px; cursor: pointer; background: none; border: none; color: #4b5563; }
+        .date-filter-container { display: flex; align-items: center; gap: 10px; font-weight: 500; }
+        .date-input { border: 1px solid #d1d5db; border-radius: 4px; padding: 6px 10px; font-family: inherit; }
+
+        #content-area { padding: 20px; overflow-y: auto; height: calc(100vh - 70px); scroll-behavior: smooth; }
+        .section-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        
+        table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 10px; }
+        th, td { border: 1px solid #000; padding: 8px; text-align: center; }
+        th { background-color: #f9fafb; font-weight: bold; }
+        .thick-border-table { border: 3px solid #000; }
+        .thick-border-table th, .thick-border-table td { border: 1px solid #000; }
+        .thick-border-table thead tr:last-child th { border-bottom: 3px solid #000; }
+        
+        .bg-gray-header { background-color: #d1d5db !important; }
+        .bg-blue-header { background-color: #bfdbfe !important; }
+        .input-cell { background-color: #fef08a !important; padding: 0 !important; }
+        
+        .grid-input { width: 100%; height: 100%; min-height: 25px; border: none; background: transparent; text-align: center; font-size: 13px; font-family: inherit; outline: none; }
+        .grid-input:focus { background-color: #fff; box-shadow: inset 0 0 0 2px #2563eb; }
+        .locked-input { background-color: #e5e7eb !important; color: #9ca3af; cursor: not-allowed; }
+        
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        .btn-save { background-color: #10b981; color: white; padding: 8px 16px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; margin-top: 15px; transition: background 0.2s; }
+        .btn-save:hover { background-color: #059669; }
+        .btn-save:disabled { background-color: #9ca3af; cursor: not-allowed; opacity: 0.6; }
+
+        .alert-error { color: #dc2626; font-weight: bold; margin-top: 10px; font-size: 14px; display: none; }
+        .alert-success { color: #10b981; font-weight: bold; margin-top: 10px; font-size: 14px; display: none; }
+
+        .admin-tab { cursor: pointer; padding: 10px 20px; background-color: #e5e7eb; border-radius: 5px 5px 0 0; font-weight: bold; color: #4b5563; transition: background 0.2s; }
+        .admin-tab:hover { background-color: #d1d5db; }
+        .admin-tab.active { background-color: #ffffff; color: #1f2937; border-top: 3px solid #2563eb; }
+        .admin-section { display: none; background: white; padding: 20px; border-radius: 0 5px 5px 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .admin-section.active { display: block; }
+
+        .auth-grid th, .auth-grid td { font-size: 11px; padding: 4px; border: 1px solid #ccc; }
+        .auth-grid th { background-color: #e5e7eb; }
+        .auth-sub-th { font-size: 10px; }
+        
+        .sidebar-heading { padding: 15px 20px; font-size: 13px; font-weight: bold; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; border-top: 1px solid #374151; cursor: pointer; transition: color 0.2s, background-color 0.2s; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-heading:hover { color: #ffffff; background-color: #374151; }
+
+        .mp-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .mp-table th { padding: 6px; font-weight: bold; border: 1px solid #d1d5db; }
+        .mp-table td { border: 1px solid #d1d5db; padding: 0; }
+        .mp-table td:first-child { padding: 4px 8px; text-align: left; font-weight: 600; background: #f9fafb; width: 50%; color: #374151; }
+        .mp-input { width: 100%; height: 100%; min-height: 24px; border: none; text-align: center; background: transparent; font-size: 12px; outline: none; }
+        .mp-input:focus { box-shadow: inset 0 0 0 2px #2563eb; background: white; }
+
+        /* ================= A4 PRINT OPTIMIZATION CSS ================= */
+        @media print {
+            @page { size: A4 portrait; margin: 10mm; }
+            body, html { width: 100% !important; background-color: #ffffff !important; color: #000; font-size: 11pt !important; height: auto !important; overflow: visible !important; }
+            #sidebar, #topbar, #welcome-banner, #dashboard-global-header, .print-hide, .btn-save, input[type="file"] { display: none !important; }
+            #main-content { width: 100% !important; margin: 0 !important; padding: 0 !important; display: block !important; }
+            #content-area { overflow: visible !important; height: auto !important; display: block !important; padding: 0 !important; }
+            
+            .print-block-stack { display: block !important; width: 100% !important; }
+            .section-container { box-shadow: none !important; margin-bottom: 20px !important; border: none !important; padding: 0 !important; page-break-inside: avoid; width: 100% !important; }
+            
+            table { width: 100% !important; max-width: 100% !important; table-layout: fixed; border-collapse: collapse !important; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            th, td { padding: 4px !important; font-size: 10pt !important; border: 1px solid #000 !important; word-wrap: break-word; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+        
+        #db-loading { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 1rem; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- DB Loading Screen -->
+    <div id="db-loading">
+        <div class="spinner"></div>
+        <p class="text-gray-700 font-bold">Syncing data from Realtime Database...</p>
+    </div>
+
+    <!-- ================= LOGIN PAGE ================= -->
+    <div id="login-container" class="flex w-full h-full items-center justify-center bg-gray-200" style="display: flex;">
+        <div class="bg-white p-8 rounded shadow-md w-96 relative">
+            <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">WMS Login</h2>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">User ID (Name)</label>
+                <select id="user-id" class="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-blue-500">
+                    <option value="">Select User ID</option>
+                </select>
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+                <input type="password" id="user-pass" placeholder="Enter password" class="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-blue-500">
+            </div>
+            <button onclick="userLogin()" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition duration-200 shadow-md">Login</button>
+            <div class="mt-4 flex justify-between items-center">
+                <a href="#" onclick="alert('Please contact your Admin to Reset the Password.')" class="text-sm text-red-500 hover:underline font-semibold">Forgot Password?</a>
+                <a href="#" onclick="openAdminModal()" class="text-sm text-blue-500 hover:underline font-semibold">Admin Panel</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= CUSTOM ADMIN LOGIN MODAL ================= -->
+    <div id="admin-login-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center z-50" style="display: none;">
+        <div class="bg-white p-6 rounded shadow-lg w-80 relative">
+            <h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Admin Authentication</h3>
+            <div class="mb-4">
+                <label class="block text-sm font-bold mb-2 text-gray-700">Enter Admin Password:</label>
+                <div class="flex items-center border border-gray-400 rounded overflow-hidden focus-within:border-blue-500 bg-gray-50">
+                    <input type="password" id="admin-modal-pass" placeholder="Password" class="w-full p-2 outline-none text-sm bg-transparent">
+                    <button type="button" onclick="toggleAdminPass()" id="admin-pass-toggle-btn" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-xs font-bold text-gray-700 transition-colors border-l border-gray-400">Show</button>
+                </div>
+                <div class="text-right mt-1">
+                    <a href="#" onclick="openAdminForgotModal()" class="text-xs text-blue-600 hover:underline">Forgot Admin Password?</a>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="closeAdminModal()" class="px-4 py-2 bg-gray-300 text-gray-800 text-sm rounded font-bold hover:bg-gray-400">Cancel</button>
+                <button onclick="submitAdminLogin()" class="px-4 py-2 bg-blue-600 text-white text-sm rounded font-bold hover:bg-blue-700">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 1: OTP Phone Number -->
+    <div id="admin-forgot-modal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-[60]" style="display: none;">
+        <div class="bg-white p-6 rounded shadow-lg w-80 relative">
+            <h3 class="text-lg font-bold mb-2 text-gray-800">Admin Recovery</h3>
+            <p class="text-xs text-gray-600 mb-4">Enter the registered admin mobile number ending in <b id="admin-phone-hint">***123</b> to receive an OTP.</p>
+            <input type="text" id="admin-recovery-phone" placeholder="Enter full 10-digit number" class="w-full border border-gray-400 p-2 rounded text-sm mb-4 outline-none focus:border-blue-500" maxlength="10">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeAdminForgotModal()" class="px-4 py-2 bg-gray-300 text-gray-800 text-sm rounded font-bold hover:bg-gray-400">Cancel</button>
+                <button onclick="verifyAdminPhoneAndSendOTP()" class="px-4 py-2 bg-blue-600 text-white text-sm rounded font-bold hover:bg-blue-700">Send OTP</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: OTP Verification -->
+    <div id="admin-otp-modal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-[60]" style="display: none;">
+        <div class="bg-white p-6 rounded shadow-lg w-80 relative">
+            <h3 class="text-lg font-bold mb-2 text-gray-800">Enter OTP</h3>
+            <p class="text-xs text-green-600 font-bold mb-4">A 5-digit OTP has been sent to your mobile.</p>
+            <input type="text" id="admin-recovery-otp" placeholder="Enter 5-digit OTP" class="w-full border border-gray-400 p-2 rounded text-center tracking-widest font-bold text-lg mb-4 outline-none focus:border-blue-500" maxlength="5">
+            <div class="flex justify-end gap-2">
+                <button onclick="cancelOTPFlow()" class="px-4 py-2 bg-gray-300 text-gray-800 text-sm rounded font-bold hover:bg-gray-400">Cancel</button>
+                <button onclick="verifyAdminOTP()" class="px-4 py-2 bg-green-600 text-white text-sm rounded font-bold hover:bg-green-700">Verify</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Reset Password -->
+    <div id="admin-reset-modal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-[60]" style="display: none;">
+        <div class="bg-white p-6 rounded shadow-lg w-80 relative">
+            <h3 class="text-lg font-bold mb-2 text-gray-800">Set New Password</h3>
+            <input type="password" id="admin-new-pass" placeholder="Enter new password" class="w-full border border-gray-400 p-2 rounded text-sm mb-4 outline-none focus:border-blue-500">
+            <button onclick="saveNewAdminPassword()" class="w-full py-2 bg-blue-600 text-white text-sm rounded font-bold hover:bg-blue-700">Save Password & Login</button>
+        </div>
+    </div>
+
+    <!-- ================= EMAIL CONFIRMATION MODAL ================= -->
+    <div id="email-confirm-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center z-50" style="display: none;">
+        <div class="bg-white p-6 rounded-lg shadow-2xl w-80 text-center border-t-4 border-blue-500">
+            <div class="text-4xl mb-3">📧</div>
+            <h3 class="text-xl font-bold mb-2 text-gray-800" id="email-modal-title">Send Email Report?</h3>
+            <p class="text-sm text-gray-600 mb-6" id="email-modal-desc">This will draft an email to the configured admins. You can attach your downloaded Excel report manually before sending.</p>
+            <div class="flex justify-center gap-4" id="email-modal-actions">
+                <button onclick="closeEmailModal()" class="px-6 py-2 bg-gray-300 text-gray-800 text-sm rounded font-bold hover:bg-gray-400 transition">No</button>
+                <button onclick="executeEmailSend()" class="px-6 py-2 bg-blue-600 text-white text-sm rounded font-bold hover:bg-blue-700 shadow transition">Yes, Draft Mail</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= ADMIN PAGE ================= -->
+    <div id="admin-container" class="hidden w-full h-full bg-gray-100 flex-col overflow-y-auto" style="display: none;">
+        <div class="bg-gray-800 text-white p-4 flex justify-between items-center shadow-md shrink-0">
+            <h2 class="text-xl font-bold">Admin Dashboard</h2>
+            <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded font-bold text-sm shadow-md transition">Back to Login Page</button>
+        </div>
+        <div class="p-8 max-w-6xl mx-auto w-full">
+            
+            <div class="flex border-b border-gray-300 mb-4 overflow-x-auto whitespace-nowrap bg-white px-2 pt-2 rounded-t-lg shadow-sm">
+                <div class="admin-tab active" onclick="switchAdminTab('admin-users')">User Management</div>
+                <div class="admin-tab" onclick="switchAdminTab('admin-auth')">Authorizations</div>
+                <div class="admin-tab" onclick="switchAdminTab('admin-dept-config')">Dept Configuration</div>
+                <div class="admin-tab" onclick="switchAdminTab('admin-tasks')">Task Management</div>
+                <div class="admin-tab" onclick="switchAdminTab('admin-data')">Data Management</div>
+                <div class="admin-tab text-purple-700" onclick="switchAdminTab('admin-emails')">Email Config</div>
+                <div class="admin-tab text-red-700" onclick="switchAdminTab('admin-ui-control')">UI Controls</div>
+                <div class="admin-tab text-blue-700" onclick="switchAdminTab('admin-mis-section')">MIS Section</div>
+                <div class="admin-tab text-green-700" onclick="switchAdminTab('admin-user-section')">User Section</div>
+            </div>
+
+            <div id="admin-users" class="admin-section active">
+                <h3 class="text-lg font-bold mb-4 text-gray-800">Create Users</h3>
+                <div class="bg-gray-50 p-4 border rounded mb-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="hidden" id="edit-user-index" value="-1">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 mb-1">User Name</label>
+                            <input type="text" id="add-u-name" class="w-full border p-2 rounded text-sm outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 mb-1">Password (Optional)</label>
+                            <input type="text" id="add-u-pass" placeholder="Leave blank for user to set" class="w-full border p-2 rounded text-sm bg-white outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div class="mt-4 flex gap-2">
+                        <button onclick="saveAdminUser()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-4 rounded shadow">Save User</button>
+                        <button onclick="clearUserForm()" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-1 px-4 rounded shadow">Cancel</button>
+                    </div>
+                </div>
+                <table class="w-full text-left text-sm border bg-white shadow-sm">
+                    <thead class="bg-gray-200">
+                        <tr><th class="p-2 border">User Name</th><th class="p-2 border">Password</th><th class="p-2 border text-center">Actions</th></tr>
+                    </thead>
+                    <tbody id="admin-users-list"></tbody>
+                </table>
+            </div>
+
+            <div id="admin-auth" class="admin-section">
+                <h3 class="text-lg font-bold mb-4 text-gray-800">User Authorization Grid</h3>
+                <div class="flex gap-4 mb-4 items-end bg-gray-50 p-4 border rounded">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Filter User</label>
+                        <select id="auth-user-select" class="border border-gray-300 p-2 rounded w-56 text-sm outline-none focus:border-blue-500" onchange="loadUserAuthGrid()">
+                            <option value="">-- Select User --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Filter Section</label>
+                        <select id="auth-section-select" class="border border-gray-300 p-2 rounded w-56 text-sm outline-none focus:border-blue-500" onchange="loadUserAuthGrid()">
+                            <option value="MIS">MIS Section</option>
+                            <option value="USER">User Section</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="auth-grid-container" class="hidden overflow-x-auto border rounded bg-white shadow-sm">
+                    <table class="auth-grid w-full min-w-max">
+                        <thead>
+                            <tr>
+                                <th rowspan="2" class="w-1/4">Sections (Modules)</th>
+                                <th colspan="11" class="border-l-2 border-gray-400 text-blue-800">Bldg #3</th>
+                                <th colspan="11" class="border-l-2 border-gray-400 text-green-800">Bldg #5</th>
+                            </tr>
+                            <tr>
+                                <th class="auth-sub-th border-l-2 border-gray-400">QC</th><th class="auth-sub-th">GRN</th><th class="auth-sub-th">PUTAWAY</th><th class="auth-sub-th">CLAIMS</th><th class="auth-sub-th">REFIN</th><th class="auth-sub-th text-purple-600">RTV</th><th class="auth-sub-th text-purple-600">CYCLE</th><th class="auth-sub-th text-purple-600">FWD</th><th class="auth-sub-th text-purple-600">M2M</th><th class="auth-sub-th text-pink-600">PHOTO</th><th class="auth-sub-th text-blue-600">OTHER</th>
+                                <th class="auth-sub-th border-l-2 border-gray-400">QC</th><th class="auth-sub-th">GRN</th><th class="auth-sub-th">PUTAWAY</th><th class="auth-sub-th">CLAIMS</th><th class="auth-sub-th">REFIN</th><th class="auth-sub-th text-purple-600">RTV</th><th class="auth-sub-th text-purple-600">CYCLE</th><th class="auth-sub-th text-purple-600">FWD</th><th class="auth-sub-th text-purple-600">M2M</th><th class="auth-sub-th text-pink-600">PHOTO</th><th class="auth-sub-th text-blue-600">OTHER</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auth-grid-body"></tbody>
+                    </table>
+                    <div class="m-4">
+                        <button onclick="saveUserAuthGrid()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded shadow">Save Authorizations</button>
+                        <span id="auth-save-msg" class="ml-4 text-green-600 font-bold hidden">Permissions Saved Successfully!</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="admin-dept-config" class="admin-section">
+                <h3 class="text-lg font-bold mb-4 text-gray-800">Dashboard Departments Config</h3>
+                <p class="text-xs text-gray-600 mb-4">Add, rename, or remove data rows dynamically for the MIS and User Data Entry views.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="border p-4 bg-white shadow-sm rounded-lg">
+                        <h4 class="font-bold text-blue-800 mb-2 border-b pb-1">Target Dashboard Rows</h4>
+                        <ul id="admin-target-depts-list" class="list-none pl-0 max-h-64 overflow-y-auto mb-2"></ul>
+                        <button type="button" onclick="addTargetDept()" class="text-blue-600 text-xs font-bold hover:underline">+ Add New Row</button>
+                    </div>
+                    <div class="border p-4 bg-white shadow-sm rounded-lg">
+                        <h4 class="font-bold text-green-800 mb-2 border-b pb-1">Pendency Dashboard Rows</h4>
+                        <ul id="admin-pendency-depts-list" class="list-none pl-0 max-h-64 overflow-y-auto mb-2"></ul>
+                        <button type="button" onclick="addPendencyDept()" class="text-green-600 text-xs font-bold hover:underline">+ Add New Row</button>
+                    </div>
+                </div>
+                <div class="mt-6 border-t pt-4">
+                    <button onclick="saveDashboardDepts()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded shadow transition">Save Dashboard Layout</button>
+                    <span id="dept-save-msg" class="text-green-600 font-bold hidden items-center ml-2">Layout Saved Successfully!</span>
+                </div>
+            </div>
+
+            <div id="admin-tasks" class="admin-section">
+                <h3 class="text-lg font-bold mb-2 text-gray-800">Manpower Task Configuration</h3>
+                <div id="admin-tasks-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6"></div>
+                <div class="flex gap-4 border-t pt-4">
+                    <button onclick="addDraftDept()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-6 rounded shadow">+ Add New Department</button>
+                    <button onclick="saveAdminTasks()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded shadow">Save Configuration</button>
+                    <span id="task-save-msg" class="text-green-600 font-bold hidden items-center ml-2">Configuration Saved Successfully!</span>
+                </div>
+            </div>
+
+            <div id="admin-data" class="admin-section">
+                <h3 class="text-lg font-bold mb-4 text-gray-800">Data Management (Edit & Delete)</h3>
+                <div class="flex gap-4 items-end bg-gray-50 p-4 border rounded mb-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">Select Date</label>
+                        <input type="date" id="admin-data-date" class="border p-2 rounded text-sm outline-none focus:border-blue-500" onchange="loadAdminModulesList()">
+                    </div>
+                </div>
+                <div id="admin-modules-list" class="hidden grid grid-cols-1 gap-3"></div>
+                
+                <div id="admin-data-editor" class="hidden mt-6 bg-white p-4 border shadow-sm rounded">
+                    <div class="flex justify-between items-center mb-4 border-b pb-2">
+                        <h4 class="font-bold text-gray-800 text-lg" id="admin-editor-title">Editing Data</h4>
+                        <button onclick="closeAdminEditor()" class="text-gray-500 hover:text-red-500 font-bold text-sm">Close X</button>
+                    </div>
+                    <div id="admin-editor-content" class="max-h-96 overflow-y-auto mb-4 p-2 bg-gray-50 rounded"></div>
+                    <div class="mt-4 flex justify-between items-center bg-gray-50 p-3 rounded border">
+                        <span class="text-gray-600 text-sm font-medium">Save your changes here:</span>
+                        <button onclick="adminSaveModifiedData()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-8 rounded shadow transition">Save Modified Data</button>
+                    </div>
+                    <span id="admin-data-msg" class="text-green-600 font-bold mt-2 hidden block">Data updated successfully!</span>
+                </div>
+            </div>
+
+            <div id="admin-emails" class="admin-section">
+                <h3 class="text-lg font-bold mb-4 text-gray-800">Email Configuration</h3>
+                <div class="bg-gray-50 p-4 border rounded mb-6 flex gap-4 items-end">
+                    <div class="flex-grow">
+                        <label class="block text-xs font-bold text-gray-600 mb-1">Email Address</label>
+                        <input type="email" id="add-email-input" class="w-full border p-2 rounded text-sm outline-none focus:border-blue-500" placeholder="e.g. manager@warehouse.com">
+                    </div>
+                    <button onclick="saveAdminEmail()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded shadow">Add Email</button>
+                </div>
+                <table class="w-full text-left text-sm border bg-white shadow-sm">
+                    <thead class="bg-gray-200">
+                        <tr><th class="p-2 border w-3/4">Configured Email IDs</th><th class="p-2 border text-center">Action</th></tr>
+                    </thead>
+                    <tbody id="admin-email-list"></tbody>
+                </table>
+            </div>
+
+            <!-- NEW UI CONTROL ADMIN TAB -->
+            <div id="admin-ui-control" class="admin-section">
+                <h3 class="text-lg font-bold mb-4 text-gray-800">Global UI Controls (Enable/Disable Elements)</h3>
+                <p class="text-xs text-gray-600 mb-4">Uncheck a box to disable the corresponding button/link across the application.</p>
+                <div id="ui-controls-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"></div>
+                <div class="mt-4 border-t pt-4">
+                    <button onclick="saveUIControls()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded shadow transition">Save UI Layout Configuration</button>
+                    <span id="ui-save-msg" class="text-green-600 font-bold hidden items-center ml-2">Configuration Saved!</span>
+                </div>
+            </div>
+
+            <div id="admin-mis-section" class="admin-section">
+                <h3 class="text-xl font-bold mb-2 text-blue-800 border-b pb-2">MIS Section Overview</h3>
+                <div class="bg-blue-50 p-4 rounded border border-blue-200">
+                    <div id="admin-mis-links" class="flex flex-col gap-2 text-sm font-medium"></div>
+                </div>
+            </div>
+
+            <div id="admin-user-section" class="admin-section">
+                <h3 class="text-xl font-bold mb-2 text-green-800 border-b pb-2">User Section Overview</h3>
+                <div class="bg-green-50 p-4 rounded border border-green-200">
+                    <div id="admin-user-links" class="flex flex-col gap-2 text-sm font-medium"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MAIN APP DASHBOARD ================= -->
+    <div id="app-container" class="hidden w-full h-full" style="display: none;">
+        <div id="sidebar" class="shadow-lg z-20 relative">
+            <div style="padding: 20px; font-size: 18px; font-weight: bold; border-bottom: 1px solid #374151; display:flex; align-items:center; gap:10px;">
+                <span style="font-size:24px;">📊</span> WMS Dashboard
+            </div>
+            
+            <div id="mis-heading" class="sidebar-heading" onclick="toggleNav('mis-nav-group', 'mis-icon')">
+                MIS SECTION <span id="mis-icon" class="text-xs transition-transform duration-200">▶</span>
+            </div>
+            <div id="mis-nav-group" style="display: none;" class="bg-gray-800 border-b border-gray-700">
+                <div id="link-file-upload" class="menu-item module-link text-white font-bold" data-mod="data-file-upload" onclick="showSection('data-file-upload', this)">File Upload Section</div>
+                <div id="link-dashboard" class="menu-item module-link text-yellow-400 font-bold" data-mod="dashboard-section" onclick="showSection('dashboard-section', this)">Dashboard Section</div>
+            </div>
+            
+            <div id="user-heading" class="sidebar-heading border-t-0" onclick="toggleNav('user-nav-group', 'user-icon')">
+                USER SECTION <span id="user-icon" class="text-xs transition-transform duration-200">▶</span>
+            </div>
+            <div id="user-nav-group" style="display: none;" class="bg-gray-800 border-b border-gray-700">
+                <div id="link-user-data-entry" class="menu-item module-link" data-mod="user-data-entry" onclick="showSection('user-data-entry', this)">Data Entry Page</div>
+                <div id="link-user-dept-pendency" class="menu-item module-link" data-mod="user-dept-pendency" onclick="showSection('user-dept-pendency', this)">Dept. Pendency (Data Entry)</div>
+                <div id="link-user-manpower" class="menu-item module-link" data-mod="user-manpower" onclick="showSection('user-manpower', this)">Manpower Detail Entry</div>
+            </div>
+            
+            <div class="menu-item text-red-400 mt-6 border-t border-gray-700 hover:bg-red-500 hover:text-white transition" onclick="logout()">Logout</div>
+        </div>
+
+        <div id="main-content" class="bg-gray-50 flex flex-col w-full">
+            <div id="topbar">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <button class="toggle-btn hover:text-blue-600 transition print-hide" onclick="toggleSidebar()">☰</button>
+                    <h2 id="page-title" style="margin:0; font-size: 20px; font-weight: bold; color: #1f2937;">Dashboard</h2>
+                </div>
+                <div class="flex items-center gap-4 print-hide">
+                    <div class="date-filter-container bg-gray-100 px-3 py-1.5 rounded border border-gray-300">
+                        <label for="global-date" class="text-xs font-bold text-gray-600 uppercase">Global Date:</label>
+                        <input type="date" id="global-date" class="date-input bg-transparent border-none text-sm p-0 focus:outline-none" onchange="handleDateChange()">
+                    </div>
+                    <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded text-sm font-bold hover:bg-red-600 shadow transition">Logout</button>
+                </div>
+            </div>
+
+            <div id="content-area" class="relative">
+                <div id="welcome-banner" class="hidden mb-6 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-800 rounded-xl shadow-lg p-6 text-white flex flex-col md:flex-row justify-between items-center border border-blue-400/50 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl pointer-events-none"></div>
+                    <div class="absolute bottom-0 left-10 w-24 h-24 bg-white opacity-5 rounded-full blur-xl pointer-events-none"></div>
+                    
+                    <div class="mb-4 md:mb-0 text-center md:text-left relative z-10">
+                        <h2 class="text-3xl font-extrabold tracking-tight drop-shadow-md" id="banner-welcome-text">Welcome, User</h2>
+                        <p class="text-blue-100 mt-1 text-sm font-medium tracking-wide">Warehouse Operations Management System</p>
+                    </div>
+                    <div class="text-right bg-white/10 px-6 py-3 rounded-xl backdrop-blur-md border border-white/20 shadow-inner min-w-[240px] text-center md:text-right relative z-10">
+                        <div class="text-[10px] text-blue-200 uppercase tracking-widest font-bold mb-1 drop-shadow-sm flex items-center justify-center md:justify-end gap-1">
+                            <span>🕒</span> Current Date & Time
+                        </div>
+                        <div class="text-xl font-bold tracking-wide drop-shadow-md text-white" id="banner-live-clock">--</div>
+                    </div>
+                </div>
+
+                <div id="welcome-screen" class="section-container module-section text-center py-16 border border-dashed border-gray-300 bg-white">
+                    <div class="text-6xl mb-4">👋</div>
+                    <h2 class="text-2xl font-bold text-gray-400 mb-2">Ready to Start</h2>
+                    <p class="text-gray-500">Please select an authorized option from the sidebar menu on the left.</p>
+                </div>
+
+                <!-- GLOBAL DASHBOARD HEADER -->
+                <div id="dashboard-global-header" class="hidden mb-6 flex flex-col md:flex-row justify-between items-center bg-gray-800 p-4 rounded-lg shadow-md print-hide">
+                    <h2 class="text-xl font-bold text-white mb-3 md:mb-0">Full Dashboard Report</h2>
+                    <div class="flex flex-wrap gap-2 justify-center">
+                        <button id="btn-copy-text" onclick="copyAllAsText()" class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">📋 Copy as Text (Excel Format)</button>
+                        <button id="btn-download-excel" onclick="downloadDashboardExcel()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">⬇️ Download Excel</button>
+                        <button id="btn-print-a4" onclick="window.print()" class="bg-blue-500 hover:bg-blue-400 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">🖨️ Print A4</button>
+                        <button id="btn-email-report" onclick="openEmailModal()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">✉️ Email Report</button>
+                    </div>
+                </div>
+
+                <!-- CENTRAL FILE UPLOAD SECTION -->
+                <div id="data-file-upload" class="section-container module-section" style="display:none;">
+                    <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 5px; color: #1f2937;">File Upload Section</h3>
+                    <div class="grid grid-cols-1 gap-5">
+                        <div class="flex flex-col md:flex-row items-center justify-between bg-white p-4 border border-blue-100 rounded-lg shadow-sm hover:shadow transition">
+                            <div class="font-bold text-gray-800 md:w-1/3 mb-3 md:mb-0">
+                                Overall putaway pending upload
+                                <div id="msg-lock-overall" class="text-red-500 text-[10px] uppercase tracking-wide font-extrabold mt-1 hidden">🔒 Locked by Admin</div>
+                            </div>
+                            <input type="file" id="csv-upload-overall-central" accept=".csv" class="text-sm bg-gray-50 border border-gray-300 p-2 rounded md:w-1/3 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-3 md:mb-0 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button id="btn-upload-overall" class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-2 px-6 rounded transition shadow w-full md:w-40" onclick="uploadCentralCSV('overall')">Upload Single</button>
+                        </div>
+                        <div class="flex flex-col md:flex-row items-center justify-between bg-white p-4 border border-blue-100 rounded-lg shadow-sm hover:shadow transition">
+                            <div class="font-bold text-gray-800 md:w-1/3 mb-3 md:mb-0">
+                                Putaway pending bldg wise upload
+                                <div id="msg-lock-putaway" class="text-red-500 text-[10px] uppercase tracking-wide font-extrabold mt-1 hidden">🔒 Locked by Admin</div>
+                            </div>
+                            <input type="file" id="csv-upload-putaway-central" accept=".csv" class="text-sm bg-gray-50 border border-gray-300 p-2 rounded md:w-1/3 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-3 md:mb-0 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button id="btn-upload-putaway" class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-2 px-6 rounded transition shadow w-full md:w-40" onclick="uploadCentralCSV('putaway')">Upload Single</button>
+                        </div>
+                        <div class="flex flex-col md:flex-row items-center justify-between bg-white p-4 border border-blue-100 rounded-lg shadow-sm hover:shadow transition">
+                            <div class="font-bold text-gray-800 md:w-1/3 mb-3 md:mb-0">
+                                Return po wise grn pending upload
+                                <div id="msg-lock-po" class="text-red-500 text-[10px] uppercase tracking-wide font-extrabold mt-1 hidden">🔒 Locked by Admin</div>
+                            </div>
+                            <input type="file" id="csv-upload-po-central" accept=".csv" class="text-sm bg-gray-50 border border-gray-300 p-2 rounded md:w-1/3 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-3 md:mb-0 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button id="btn-upload-po" class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-2 px-6 rounded transition shadow w-full md:w-40" onclick="uploadCentralCSV('po')">Upload Single</button>
+                        </div>
+                    </div>
+                    <div class="mt-8 border-t border-gray-200 pt-6 flex justify-between items-center">
+                         <button id="btn-clear-files" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg shadow transition disabled:opacity-50 disabled:cursor-not-allowed" onclick="clearUploadedFiles()">Remove Uploaded Files</button>
+                         <button id="btn-upload-all" class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-extrabold py-3 px-8 rounded-lg shadow-lg text-base transition" onclick="uploadAllCentralCSV()">Upload All Selected Files</button>
+                    </div>
+                </div>
+
+                <!-- TARGET DASHBOARD (MIS) -->
+                <div id="target-board" class="section-container module-section" style="display:none;">
+                    <div class="flex justify-between items-center border-b border-gray-300 pb-2 mb-4">
+                        <h3 style="font-size: 18px; font-weight: bold; margin: 0;">Daily Target Dashboard (Consolidated)</h3>
+                    </div>
+                    <table class="thick-border-table">
+                        <thead>
+                            <tr><th colspan="5" class="bg-gray-header" style="font-size: 18px; padding: 12px;">DAILY TARGET DASHBOARD</th></tr>
+                            <tr>
+                                <th rowspan="2" style="width: 20%;">DEPARTMENT</th>
+                                <th rowspan="2" style="width: 15%;">MANPOWER</th>
+                                <th colspan="2" id="header-yesterday-date">--</th>
+                                <th id="header-today-date" class="bg-blue-header">--</th>
+                            </tr>
+                            <tr><th>YESTERDAY TARGET</th><th>ACHIEVE</th><th>TODAY TARGET</th></tr>
+                        </thead>
+                        <tbody id="mis-target-tbody">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- NEW WRAPPER FOR SIDE-BY-SIDE LAYOUT -->
+                <div class="flex flex-col xl:flex-row gap-6 w-full items-start mb-8 print-block-stack">
+                    
+                    <!-- DEPT PENDENCY MIS VIEW -->
+                    <div id="mis-dept-pendency" class="section-container module-section w-full xl:w-7/12" style="display:none; margin-bottom: 0;">
+                        <div class="flex justify-between items-center border-b border-gray-300 pb-2 mb-4">
+                            <h3 style="font-size: 18px; font-weight: bold; margin: 0;">Department Wise Pendency (Consolidated Dashboard)</h3>
+                        </div>
+                        <table class="thick-border-table" style="width: 100%;">
+                            <thead>
+                                <tr><th colspan="4" class="bg-gray-header" style="font-size: 16px;">Dept. wise Pendency</th></tr>
+                                <tr><th>Dept.</th><th>Bldg#3</th><th>Bldg#5</th><th>Total</th></tr>
+                            </thead>
+                            <tbody id="mis-pendency-tbody">
+                                <!-- Populated dynamically via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- OVERALL PUTAWAY PENDING -->
+                    <div id="overall-putaway" class="section-container module-section w-full xl:w-5/12" style="display:none; margin-bottom: 0;">
+                        <div class="flex justify-between items-center border-b border-gray-300 pb-2 mb-4">
+                            <h3 style="font-size: 18px; font-weight: bold; margin: 0;">Overall Putaway Pending</h3>
+                        </div>
+                        <table class="thick-border-table" style="width: 100%;">
+                            <thead><tr><th colspan="2" class="bg-gray-header" style="font-size: 16px;">Overall Putaway Pending</th></tr></thead>
+                            <tbody>
+                                <tr><td style="font-weight: bold; text-align: center;">GRN</td><td id="op-grn" style="background-color: #f9fafb;" class="font-bold text-gray-800"></td></tr>
+                                <tr><td style="font-weight: bold; text-align: center;">LOST</td><td id="op-lost" style="background-color: #f9fafb;" class="font-bold text-gray-800"></td></tr>
+                                <tr><td style="font-weight: bold; text-align: center;">OFFLINE</td><td id="op-offline" style="background-color: #f9fafb;" class="font-bold text-gray-800"></td></tr>
+                                <tr><td style="font-weight: bold; text-align: center;">RECYCLE</td><td id="op-recycle" style="background-color: #f9fafb;" class="font-bold text-gray-800"></td></tr>
+                                <tr><td style="font-weight: bold; text-align: center;">PACKED</td><td id="op-packed" style="background-color: #f9fafb;" class="font-bold text-gray-800"></td></tr>
+                                <tr><td style="font-weight: bold; text-align: center;">PICKED</td><td id="op-picked" style="background-color: #f9fafb;" class="font-bold text-gray-800"></td></tr>
+                                <tr><td style="font-weight: bold; text-align: center;">NEW</td><td id="op-new" style="background-color: #f9fafb;" class="font-bold text-gray-800"></td></tr>
+                                <tr><td style="font-weight: bold; text-align: center;">Grand Total</td><td id="op-total" style="font-weight: bold; background-color: #e5e7eb;" class="text-blue-700 text-lg"></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- MANPOWER MIS VIEW -->
+                <div id="mis-manpower" class="section-container module-section" style="display:none; background: transparent; box-shadow: none; padding: 0;">
+                    <div class="bg-white p-3 rounded-lg shadow-sm mb-4 border-b border-gray-300">
+                        <h3 style="font-size: 18px; font-weight: bold; margin: 0;">Manpower Dash Board (Consolidated)</h3>
+                    </div>
+                    <div id="mis-manpower-grid" class="columns-1 md:columns-2 lg:columns-3 gap-6"></div>
+                </div>
+
+                <!-- PUTAWAY PENDING BLDG WISE -->
+                <div id="putaway-bldg-wise" class="section-container module-section" style="display:none;">
+                    <div class="flex justify-between items-center border-b border-gray-300 pb-2 mb-4">
+                        <h3 style="font-size: 18px; font-weight: bold; margin: 0;">Putaway Pending Bldg wise</h3>
+                    </div>
+                    <h4 class="text-md font-bold mt-4 mb-2 text-gray-700">Putaway Pending Bldg#3</h4>
+                    <div id="putaway-b3-wrapper"></div>
+                    
+                    <h4 class="text-md font-bold mt-8 mb-2 text-gray-700">Putaway Pending Bldg#5</h4>
+                    <div id="putaway-b5-wrapper"></div>
+                </div>
+
+                <!-- RETURNS PO WISE GRN PENDING -->
+                <div id="returns-po" class="section-container module-section" style="display:none;">
+                    <div class="flex justify-between items-center border-b border-gray-300 pb-2 mb-4">
+                        <h3 style="font-size: 18px; font-weight: bold; margin: 0;">Returns PO wise GRN Pending</h3>
+                    </div>
+                    <div id="returns-po-table-wrapper"></div>
+                </div>
+
+                <!-- DATA ENTRY PAGE (USER ENTRY) -->
+                <div id="user-data-entry" class="section-container module-section" style="display:none;">
+                    <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">Data Entry Page (Daily Target)</h3>
+                    <form id="form-user-target" onsubmit="saveUserTarget(event)">
+                        <table class="thick-border-table" id="data-entry-table">
+                            <thead>
+                                <tr><th colspan="3" class="bg-gray-header" style="font-size: 18px; padding: 12px;">DAILY TARGET DASHBOARD</th></tr>
+                                <tr>
+                                    <th rowspan="2" style="width: 30%;">DEPARTMENT</th>
+                                    <th class="bg-blue-100" style="width: 35%;">
+                                        <label class="text-xs text-gray-700 block mb-1">Select Date for Achieve</label>
+                                        <input type="date" id="achieve-date" class="border border-gray-400 p-1 rounded text-sm w-full outline-none focus:border-blue-500" onchange="checkFormLocks()">
+                                    </th>
+                                    <th class="bg-green-100" style="width: 35%; border-left: 2px solid #9ca3af;">
+                                        <label class="text-xs text-gray-700 block mb-1">Select Date for Target</label>
+                                        <input type="date" id="target-date" class="border border-gray-400 p-1 rounded text-sm w-full outline-none focus:border-green-500" onchange="checkFormLocks()">
+                                    </th>
+                                </tr>
+                                <tr>
+                                    <th class="bg-blue-50">ACHIEVE</th>
+                                    <th class="bg-green-50 border-left: 2px solid #9ca3af;">TODAY TARGET</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user-target-tbody">
+                                <!-- Populated dynamically via JS -->
+                            </tbody>
+                        </table>
+                        <button type="submit" id="btn-save-target" class="btn-save shadow-md mt-4">Save Data Entry</button>
+                        <div id="alert-target-success" class="alert-success">Data saved successfully!</div>
+                    </form>
+                </div>
+
+                <!-- DEPT PENDENCY USER ENTRY -->
+                <div id="user-dept-pendency" class="section-container module-section" style="display:none;">
+                    <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">Department Wise Pendency (Data Entry)</h3>
+                    <form id="form-user-pendency" onsubmit="saveUserPendency(event)">
+                        <table class="thick-border-table" style="width: 60%;" id="pendency-entry-table">
+                            <thead>
+                                <tr><th colspan="4" class="bg-gray-header" style="font-size: 16px;">Dept. wise Pendency</th></tr>
+                                <tr><th>Dept.</th><th>Bldg#3</th><th>Bldg#5</th><th>Total</th></tr>
+                            </thead>
+                            <tbody id="user-pendency-tbody">
+                                <!-- Populated dynamically via JS -->
+                            </tbody>
+                        </table>
+                        <button type="submit" id="btn-save-pendency" class="btn-save shadow-md mt-3">Save Pendency Data</button>
+                        <div id="alert-pendency-success" class="alert-success">Data saved successfully!</div>
+                        <div id="alert-pendency-error" class="alert-error">Data entry for this date is complete. Locked. Admin permission required to edit.</div>
+                    </form>
+                </div>
+
+                <!-- MANPOWER USER ENTRY -->
+                <div id="user-manpower" class="section-container module-section" style="display:none; background: transparent; box-shadow: none; padding: 0;">
+                    <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">Manpower Detail Entry</h3>
+                    <form id="form-user-manpower" onsubmit="saveUserManpower(event)">
+                        <div id="user-manpower-grid" class="columns-1 md:columns-2 lg:columns-3 gap-6"></div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border mt-4">
+                            <button type="submit" id="btn-save-manpower" class="btn-save mt-0 shadow-md">Save Manpower Data</button>
+                            <div id="alert-manpower-success" class="alert-success">Data saved successfully!</div>
+                            <div id="alert-manpower-error" class="alert-error">Data entry for this date is complete. Locked.</div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= FIREBASE RTDB SETUP =================
+        const firebaseConfig = {
+            apiKey: "AIzaSyCL8LDJVImrhDRingxAPIjSztNC368lc04",
+            authDomain: "mahendra-sir.firebaseapp.com",
+            databaseURL: "https://mahendra-sir-default-rtdb.firebaseio.com",
+            projectId: "mahendra-sir",
+            storageBucket: "mahendra-sir.firebasestorage.app",
+            messagingSenderId: "551739354961",
+            appId: "1:551739354961:web:59b66962e641030a86ed70",
+            measurementId: "G-TKCBD9MY5Q"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const dbRoot = database.ref('WMS Login');
+
+        function saveToDB(key, valStr) {
+            localStorage.setItem(key, valStr);
+            let parsedVal;
+            try { parsedVal = JSON.parse(valStr); } catch(e) { parsedVal = valStr; }
+            dbRoot.child(key).set(parsedVal).catch(err => console.error("Firebase save error:", err));
+        }
+
+        function removeFromDB(key) {
+            localStorage.removeItem(key);
+            dbRoot.child(key).remove().catch(err => console.error("Firebase remove error:", err));
+        }
+
+        function ensureArray(val) {
+            if (!val) return [];
+            if (Array.isArray(val)) return val;
+            if (typeof val === 'object') return Object.values(val);
+            return [];
+        }
+
+        // ================= GLOBAL DATA STRUCTURES (DYNAMIC) =================
+        
+        let targetDepts = [];
+        let pendencyDepts = [];
+        
+        const defaultTargetDepts = ["QC", "GRN-3", "GRN-5", "PUTAWAY-3", "PUTAWAY-5", "CYCLE COUNT", "FORWARD BLDG-03", "FORWARD BLDG-05", "TAG CHANGE", "RTV - PICK", "RTV - PACK", "PHOTOSHOOT", "CLAIMS", "REFINISHING", "OTHER_BRAND", "NEW-MANPOWER", "AJIO SCAN", "CATALOUGE", "QC CHECK", "M2M"];
+        const defaultPendencyDepts = ["QC", "GRN", "PUTAWAY", "CLAIMS", "REFINISHING", "RTV", "CYCLE COUNT", "FORWARD", "M2M", "OTHER BRAND"];
+
+        const defaultManpowerConfig = [
+            { id: 'qc', name: 'QC Department', authCat: ['QC'], tasks: ["Returns", "OBD", "Bin Movement", "Shippmet Scanning", "Stock Feeder", "Stock Collector", "Shoe Box Maker", "Helper", "Trainee", "Product Mismatch", "NRF"] },
+            { id: 'fwd', name: 'Forward Building', authCat: ['FWD'], tasks: ["Picker", "Packer", "Sorting", "Manifest", "Tag_loop", "Tag_loop Mapping", "Helper/Movement", "MRP Printing", "Ajio", "Handover", "Trainee", "LIFT"] },
+            { id: 'grn', name: 'GRN', authCat: ['GRN'], tasks: ["GRN", "Putaway", "Status Change", "Bin Change", "5S", "QC Checking", "Sorting", "Helper / Other Activities", "Piece Picking", "Belt Folding / Suit Cover", "Product Mismatch", "Movement / Unloading", "Trainee", "Cycle Count"] },
+            { id: 'putaway', name: 'Putaway', authCat: ['PUTAWAY'], tasks: ["GRN", "Putaway", "Status Change", "Bin Change", "5S", "QC Checking", "Sorting", "Helper / Other Activities", "Piece Picking", "Belt Folding / Suit Cover", "Product Mismatch", "Movement / Unloading", "Trainee", "Cycle Count"] },
+            { id: 'rtv', name: 'RTV', authCat: ['RTV'], tasks: ["Picker", "Packer", "Helper", "Dispatch", "M2M", "Cycle Count"] },
+            { id: 'claims', name: 'Claims', authCat: ['CLAIMS'], tasks: ["Claims", "Follow Up", "Training", "Photo Helper", "ND / DD"] },
+            { id: 'refinish', name: 'Refinishing', authCat: ['REFIN'], tasks: ["Refinishing Work", "Helper"] },
+            { id: 'photo', name: 'Photo Shoot', authCat: ['PHOTO'], tasks: ["Photo Shoot", "Catalogue"] },
+            { id: 'tag', name: 'Tag Change', authCat: ['OTHER'], tasks: ["Tag Change"] },
+            { id: 'other_brand', name: 'Other Brand', authCat: ['OTHER'], tasks: ["Other Brand/ Debranding"] }
+        ];
+
+        let manpowerConfig = [];
+        let draftTasks = []; 
+        let draftTargetDepts = [];
+        let draftPendencyDepts = [];
+        let reportEmails = [];
+        
+        const sidebarModules = [
+            { id: 'data-file-upload', name: 'File Upload Section', category: 'MIS', dataKey: 'data-file-upload' },
+            { id: 'target-board', name: 'Target Dash Board', category: 'MIS', dataKey: 'target-board' },
+            { id: 'mis-dept-pendency', name: 'Dept. Pendency (MIS View)', category: 'MIS', dataKey: 'dept-pendency' },
+            { id: 'mis-manpower', name: 'Manpower Dash Board', category: 'MIS', dataKey: 'manpower' },
+            { id: 'overall-putaway', name: 'Overall Putaway Pending', category: 'MIS', dataKey: 'overall-putaway' },
+            { id: 'putaway-bldg-wise', name: 'Putaway Pending Bldg wise', category: 'MIS', dataKey: 'putaway-bldg-wise' },
+            { id: 'returns-po', name: 'Returns PO wise GRN Pending', category: 'MIS', dataKey: 'returns-po' },
+            { id: 'user-data-entry', name: 'Data Entry Page', category: 'USER', dataKey: 'target-board' },
+            { id: 'user-dept-pendency', name: 'Dept. Pendency (Data Entry)', category: 'USER', dataKey: 'dept-pendency' },
+            { id: 'user-manpower', name: 'Manpower Detail Entry', category: 'USER', dataKey: 'manpower' }
+        ];
+        
+        const subCols = ["QC", "GRN", "PUTAWAY", "CLAIMS", "REFIN", "RTV", "CYCLE", "FWD", "M2M", "PHOTO", "OTHER"];
+
+        // UI Controls Admin Array
+        const uiControlsList = [
+            { id: 'link-file-upload', label: 'Sidebar: File Upload Section' },
+            { id: 'link-dashboard', label: 'Sidebar: Dashboard Section' },
+            { id: 'link-user-data-entry', label: 'Sidebar: Data Entry Page' },
+            { id: 'link-user-dept-pendency', label: 'Sidebar: Dept Pendency Entry' },
+            { id: 'link-user-manpower', label: 'Sidebar: Manpower Detail Entry' },
+            { id: 'btn-upload-overall', label: 'Upload Button: Overall Putaway' },
+            { id: 'btn-upload-putaway', label: 'Upload Button: Putaway Bldg Wise' },
+            { id: 'btn-upload-po', label: 'Upload Button: Returns PO' },
+            { id: 'btn-upload-all', label: 'Button: Upload All Selected Files' },
+            { id: 'btn-clear-files', label: 'Button: Remove Uploaded Files' },
+            { id: 'btn-copy-text', label: 'Button: Copy as Text (Excel Format)' },
+            { id: 'btn-download-excel', label: 'Button: Download Excel' },
+            { id: 'btn-print-a4', label: 'Button: Print A4' },
+            { id: 'btn-email-report', label: 'Button: Email Report' },
+            { id: 'btn-save-target', label: 'Button: Save Data Entry (Daily Target)' },
+            { id: 'btn-save-pendency', label: 'Button: Save Pendency Data' },
+            { id: 'btn-save-manpower', label: 'Button: Save Manpower Data' }
+        ];
+        let uiControlsState = {};
+
+        let wmsUsers = [];
+        let loggedInUser = null; 
+        let userPermissions = {}; 
+        let clockInterval = null;
+        let isAdminMode = false; 
+        let currentDateStr = '';
+        let generatedOTP = null;
+
+        // ================= EMAIL REPORT LOGIC =================
+        function openEmailModal() {
+            document.getElementById('email-confirm-modal').classList.remove('hidden');
+            document.getElementById('email-confirm-modal').style.display = 'flex';
+        }
+
+        function closeEmailModal() {
+            document.getElementById('email-confirm-modal').classList.add('hidden');
+            document.getElementById('email-confirm-modal').style.display = 'none';
+        }
+
+        function executeEmailSend() {
+            if(reportEmails.length === 0) {
+                alert("No admin emails configured! Please go to Admin Panel -> Email Config to add recipients.");
+                closeEmailModal();
+                return;
+            }
+            
+            const subject = encodeURIComponent(`WMS Dashboard Summary - ${currentDateStr}`);
+            const body = encodeURIComponent(`Hello,\n\nThe warehouse operations dashboard data for ${currentDateStr} has been updated.\n\n[Please attach your downloaded Excel Report here before sending]\n\nYou can review the live dashboard on the portal: ${window.location.href}\n\nRegards,\nWMS Portal`);
+            const mailtoLink = `mailto:${reportEmails.join(',')}?subject=${subject}&body=${body}`;
+            
+            const a = document.createElement('a');
+            a.href = mailtoLink;
+            a.click();
+            closeEmailModal();
+        }
+
+        // ================= COPY & DOWNLOAD =================
+        function getInlineStyledHTMLForNode(originalNode) {
+            const clone = originalNode.cloneNode(true);
+            clone.querySelectorAll('.print-hide').forEach(el => el.remove());
+            
+            const originalElements = [originalNode, ...originalNode.querySelectorAll('*')];
+            const cloneElements = [clone, ...clone.querySelectorAll('*')];
+
+            for (let i = 0; i < originalElements.length; i++) {
+                const tag = cloneElements[i].tagName;
+                if (['TH', 'TD', 'TABLE'].includes(tag)) {
+                    const computed = window.getComputedStyle(originalElements[i]);
+                    const target = cloneElements[i];
+                    
+                    if (tag === 'TD' || tag === 'TH') {
+                        const tr = originalElements[i].closest('tr');
+                        if(tr && window.getComputedStyle(tr).display === 'none') {
+                            target.closest('tr').style.display = 'none';
+                            continue;
+                        }
+                    }
+
+                    const bg = computed.backgroundColor;
+                    if (bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') { target.style.backgroundColor = bg; }
+                    
+                    target.style.color = computed.color;
+                    target.style.fontWeight = computed.fontWeight;
+                    target.style.textAlign = computed.textAlign;
+                    
+                    if (tag === 'TABLE') {
+                        target.style.borderCollapse = 'collapse';
+                        target.setAttribute('border', '1'); 
+                    }
+                    if (tag === 'TH' || tag === 'TD') {
+                        target.style.border = '1px solid #000000';
+                        target.style.padding = '8px';
+                    }
+                    
+                    if (originalElements[i].classList.contains('bg-gray-header')) target.style.backgroundColor = '#d1d5db';
+                    if (originalElements[i].classList.contains('bg-blue-header')) target.style.backgroundColor = '#bfdbfe';
+                    if (originalElements[i].classList.contains('bg-gray-50')) target.style.backgroundColor = '#f9fafb';
+                    if (originalElements[i].classList.contains('bg-blue-50')) target.style.backgroundColor = '#eff6ff';
+                    if (originalElements[i].classList.contains('text-blue-800')) target.style.color = '#1e40af';
+                    if (originalElements[i].classList.contains('text-red-600')) target.style.color = '#dc2626';
+                }
+            }
+            clone.querySelectorAll('tr[style*="display: none"]').forEach(r => r.remove());
+            return clone.outerHTML;
+        }
+
+        function copyAllAsText() {
+            let text = "";
+            const visibleModules = document.querySelectorAll('.module-section[style*="display: block"]');
+            if(visibleModules.length === 0) { alert("Nothing to copy."); return; }
+
+            visibleModules.forEach(module => {
+                const titleEl = module.querySelector('h3');
+                if (titleEl) text += titleEl.innerText + "\n";
+                const tables = module.querySelectorAll('table');
+                tables.forEach(table => {
+                    const rows = table.querySelectorAll('tr');
+                    rows.forEach(row => {
+                        if (window.getComputedStyle(row).display === 'none') return;
+                        let rowData = [];
+                        const cells = row.querySelectorAll('th, td');
+                        cells.forEach(cell => {
+                            let cellText = cell.innerText.replace(/\r?\n|\r/g, ' ').trim();
+                            rowData.push(cellText);
+                        });
+                        text += rowData.join("\t") + "\n";
+                    });
+                    text += "\n"; 
+                });
+                text += "\n"; 
+            });
+            
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Entire Dashboard copied as Text! You can now Paste (Ctrl+V) directly into Excel cells.");
+            }).catch(err => {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    alert("Entire Dashboard copied as Text! You can now Paste directly into Excel.");
+                } catch (e) { alert("Copy failed."); }
+                document.body.removeChild(textarea);
+            });
+        }
+
+        function downloadDashboardExcel() {
+            let html = "";
+            const visibleModules = document.querySelectorAll('.module-section[style*="display: block"]');
+            if(visibleModules.length === 0) { alert("Nothing to download."); return; }
+            
+            visibleModules.forEach(module => {
+                const titleEl = module.querySelector('h3');
+                if (titleEl) html += `<h3 style="font-size:18px; font-weight:bold;">${titleEl.innerText}</h3>`;
+                const tables = module.querySelectorAll('table');
+                tables.forEach(table => {
+                    html += getInlineStyledHTMLForNode(table);
+                    html += "<br><br>";
+                });
+            });
+            
+            const fullHtml = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>${html}</body></html>`;
+            const blob = new Blob([fullHtml], { type: 'application/vnd.ms-excel' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `WMS_Dashboard_${currentDateStr}.xls`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // ================= UNIVERSAL ENTER KEY =================
+        document.addEventListener('keydown', function(e) {
+            if (e.key !== 'Enter' && e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+            if (e.key === 'Enter' && e.target.id === 'user-pass') { e.preventDefault(); userLogin(); return; }
+            if (e.key === 'Enter' && e.target.id === 'admin-modal-pass') { e.preventDefault(); submitAdminLogin(); return; }
+            if (e.target.tagName === 'TEXTAREA') return;
+
+            const target = e.target;
+            if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'BUTTON') {
+                if (e.key === 'Enter' && target.tagName === 'BUTTON') return; 
+                e.preventDefault(); 
+                
+                if(target.id && (target.id.includes('achieve') || target.id.includes('target')) && target.type === 'number') {
+                    const type = target.id.includes('achieve') ? 'achieve' : 'target';
+                    const dateEl = document.getElementById(type + '-date');
+                    if (dateEl && !dateEl.value) {
+                        alert("Please select the date to start entry.");
+                        target.blur();
+                        return; 
+                    }
+                }
+
+                const container = target.closest('.module-section') || target.closest('.admin-section.active') || target.closest('.bg-white') || document;
+                const focusables = Array.from(container.querySelectorAll('input:not([readonly]):not([disabled]), select:not([disabled]), button:not([disabled])')).filter(el => el.offsetParent !== null && el.style.display !== 'none');
+                
+                const currentIndex = focusables.indexOf(target);
+                if (currentIndex > -1) {
+                    let nextInput = null;
+                    const colClass = Array.from(target.classList).find(c => c.startsWith('col-') || c.startsWith('admin-col-'));
+
+                    if (e.key === 'Enter' || e.key === 'ArrowDown') {
+                        if (colClass) {
+                            for (let i = currentIndex + 1; i < focusables.length; i++) {
+                                if (focusables[i].classList.contains(colClass)) { nextInput = focusables[i]; break; }
+                            }
+                        }
+                        if (!nextInput && currentIndex + 1 < focusables.length) nextInput = focusables[currentIndex + 1];
+                    } else if (e.key === 'ArrowUp') {
+                        if (colClass) {
+                            for (let i = currentIndex - 1; i >= 0; i--) {
+                                if (focusables[i].classList.contains(colClass)) { nextInput = focusables[i]; break; }
+                            }
+                        }
+                        if (!nextInput && currentIndex - 1 >= 0) nextInput = focusables[currentIndex - 1];
+                    }
+
+                    if (nextInput) {
+                        nextInput.focus();
+                        if (nextInput.tagName === 'INPUT' && (nextInput.type === 'text' || nextInput.type === 'number' || nextInput.type === 'password' || nextInput.type === 'email')) {
+                            nextInput.select();
+                        }
+                    }
+                }
+            }
+        });
+
+        document.addEventListener('wheel', function(e) {
+            if (e.target.type === 'number') { e.preventDefault(); }
+        }, { passive: false });
+
+        // ================= ADMIN UI CONTROLS ENGINE =================
+        function renderUIControls() {
+            const container = document.getElementById('ui-controls-container');
+            if(!container) return;
+            let html = '';
+            uiControlsList.forEach(ctrl => {
+                const isEnabled = uiControlsState[ctrl.id] !== false; // Default true
+                html += `<div class="flex items-center gap-2 p-3 border rounded bg-white shadow-sm">
+                    <input type="checkbox" id="ui-chk-${ctrl.id}" class="w-4 h-4 cursor-pointer" ${isEnabled ? 'checked' : ''}>
+                    <label for="ui-chk-${ctrl.id}" class="text-sm font-semibold text-gray-700 cursor-pointer flex-grow">${ctrl.label}</label>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function saveUIControls() {
+            uiControlsList.forEach(ctrl => {
+                const chk = document.getElementById(`ui-chk-${ctrl.id}`);
+                if(chk) uiControlsState[ctrl.id] = chk.checked;
+            });
+            saveToDB('ui_controls_config', JSON.stringify(uiControlsState));
+            
+            document.getElementById('ui-save-msg').classList.remove('hidden');
+            document.getElementById('ui-save-msg').style.display = 'inline-flex';
+            setTimeout(() => { document.getElementById('ui-save-msg').classList.add('hidden'); document.getElementById('ui-save-msg').style.display = 'none'; }, 2000);
+            
+            try { checkFormLocks(); } catch(e){}
+        }
+
+        // ================= DYNAMIC UI TABLE GENERATORS =================
+        function buildTargetTables() {
+            let misHtml = '';
+            let userHtml = '';
+
+            targetDepts.forEach((dept, i) => {
+                let mpCell = `<td id="mis-tgt-mp-${i}" class="font-bold text-gray-700 bg-gray-50 align-middle"></td>`;
+                
+                // RTV Merge Logic
+                if (dept.toUpperCase() === "RTV - PICK" && i + 1 < targetDepts.length && targetDepts[i+1].toUpperCase() === "RTV - PACK") {
+                    mpCell = `<td id="mis-tgt-mp-${i}" rowspan="2" class="font-bold text-gray-700 bg-gray-50 align-middle"></td>`;
+                } else if (dept.toUpperCase() === "RTV - PACK" && i > 0 && targetDepts[i-1].toUpperCase() === "RTV - PICK") {
+                    mpCell = ''; // Span covers this
+                }
+                
+                misHtml += `<tr>
+                    <td style="text-align: left; font-weight: bold;">${dept}</td>
+                    ${mpCell}
+                    <td id="mis-tgt-yt-${i}" class="bg-gray-50 text-gray-800 font-medium"></td>
+                    <td id="mis-tgt-ya-${i}" class="bg-gray-50 text-gray-800 font-medium"></td>
+                    <td id="mis-tgt-tt-${i}" class="bg-blue-50 text-blue-800 font-bold"></td>
+                </tr>`;
+                
+                userHtml += `<tr>
+                    <td style="text-align: left; font-weight: bold;">${dept}</td>
+                    <td class="input-cell border-r-2 border-gray-400"><input type="number" id="achieve-${i}" class="grid-input col-achieve"></td>
+                    <td class="input-cell"><input type="number" id="target-${i}" class="grid-input col-target"></td>
+                </tr>`;
+            });
+
+            // Append TOTAL row
+            misHtml += `<tr>
+                <td style="text-align: left; font-weight: bold;">TOTAL</td>
+                <td id="mis-tgt-mp-total" class="font-bold text-gray-700 bg-gray-50 align-middle"></td>
+                <td id="mis-tgt-yt-total" class="bg-gray-50 text-gray-800 font-medium"></td>
+                <td id="mis-tgt-ya-total" class="bg-gray-50 text-gray-800 font-medium"></td>
+                <td id="mis-tgt-tt-total" class="bg-blue-50 text-blue-800 font-bold"></td>
+            </tr>`;
+            
+            const mBody = document.getElementById('mis-target-tbody');
+            const uBody = document.getElementById('user-target-tbody');
+            if(mBody) mBody.innerHTML = misHtml;
+            if(uBody) uBody.innerHTML = userHtml;
+        }
+
+        function buildPendencyTables() {
+            let misHtml = '';
+            let userHtml = '';
+
+            pendencyDepts.forEach((dept, i) => {
+                misHtml += `<tr>
+                    <td style="font-weight: bold;">${dept}</td>
+                    <td id="mis-pen-b3-${i}" class="bg-gray-50 text-gray-800 font-medium"></td>
+                    <td id="mis-pen-b5-${i}" class="bg-gray-50 text-gray-800 font-medium"></td>
+                    <td style="font-weight: bold; background-color: #f9fafb;" id="mis-pen-tot-${i}"></td>
+                </tr>`;
+                
+                userHtml += `<tr>
+                    <td style="font-weight: bold;">${dept}</td>
+                    <td class="input-cell"><input type="number" id="user-pen-b3-${i}" class="grid-input calc-input col-b3" oninput="calcUserPendencyTotal(${i})"></td>
+                    <td class="input-cell"><input type="number" id="user-pen-b5-${i}" class="grid-input calc-input col-b5" oninput="calcUserPendencyTotal(${i})"></td>
+                    <td style="font-weight: bold; background-color: #f9fafb;" id="user-pen-tot-user-${i}"></td>
+                </tr>`;
+            });
+
+            const mBody = document.getElementById('mis-pendency-tbody');
+            const uBody = document.getElementById('user-pendency-tbody');
+            if(mBody) mBody.innerHTML = misHtml;
+            if(uBody) uBody.innerHTML = userHtml;
+        }
+
+        function buildManpowerTables() {
+            const misGrid = document.getElementById('mis-manpower-grid');
+            const userGrid = document.getElementById('user-manpower-grid');
+            if (!misGrid || !userGrid) return;
+
+            let misHtml = '';
+            let userHtml = '';
+
+            manpowerConfig.forEach((dept, dIdx) => {
+                // MIS View HTML (Display Only)
+                misHtml += `
+                <div id="mis-mp-card-${dIdx}" class="break-inside-avoid mb-6 bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm">
+                    <div class="bg-gray-800 text-white p-2 text-center font-bold text-sm uppercase tracking-wider">${dept.name}</div>
+                    <table class="mp-table w-full">
+                        <thead><tr class="bg-gray-100"><th>Tasks</th><th class="w-1/4 text-center">Bldg#3</th><th class="w-1/4 text-center">Bldg#5</th></tr></thead>
+                        <tbody>`;
+                
+                // User Entry HTML (Inputs with Total Row)
+                userHtml += `
+                <div id="user-mp-card-${dIdx}" class="break-inside-avoid mb-6 bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm">
+                    <div class="bg-gray-800 text-white p-2 text-center font-bold text-sm uppercase tracking-wider">${dept.name}</div>
+                    <table class="mp-table w-full">
+                        <thead><tr class="bg-gray-100"><th>Tasks</th><th class="w-1/4 text-center">Bldg#3</th><th class="w-1/4 text-center">Bldg#5</th></tr></thead>
+                        <tbody>`;
+
+                ensureArray(dept.tasks).forEach((task, tIdx) => {
+                    misHtml += `<tr class="hover:bg-gray-50"><td class="border p-2">${task}</td>
+                                <td class="border p-2 text-center font-bold text-gray-800" id="mis-mp-b3-${dIdx}-${tIdx}"></td>
+                                <td class="border p-2 text-center font-bold text-gray-800" id="mis-mp-b5-${dIdx}-${tIdx}"></td></tr>`;
+                                
+                    // Add oninput event to calculate total when user types
+                    userHtml += `<tr class="hover:bg-gray-50"><td class="border p-1 text-xs font-semibold">${task}</td>
+                                 <td class="input-cell border p-0"><input type="number" id="user-mp-b3-${dIdx}-${tIdx}" class="mp-input grid-input" oninput="calcManpowerTotal(${dIdx})"></td>
+                                 <td class="input-cell border p-0"><input type="number" id="user-mp-b5-${dIdx}-${tIdx}" class="mp-input grid-input" oninput="calcManpowerTotal(${dIdx})"></td></tr>`;
+                });
+
+                // Add Total row to MIS View
+                misHtml += `<tr class="bg-gray-100 border-t-2 border-gray-400 font-bold">
+                                <td class="border p-2 text-right">TOTAL:</td>
+                                <td class="border p-2 text-center text-blue-700" id="mis-mp-tot-b3-${dIdx}"></td>
+                                <td class="border p-2 text-center text-green-700" id="mis-mp-tot-b5-${dIdx}"></td>
+                            </tr>
+                        </tbody></table></div>`;
+                        
+                // Add Total row to User View
+                userHtml += `<tr class="bg-gray-100 border-t-2 border-gray-400 font-bold">
+                                <td class="border p-2 text-right">TOTAL:</td>
+                                <td class="border p-2 text-center text-blue-700" id="user-mp-tot-b3-${dIdx}"></td>
+                                <td class="border p-2 text-center text-green-700" id="user-mp-tot-b5-${dIdx}"></td>
+                            </tr>
+                        </tbody></table></div>`;
+            });
+
+            misGrid.innerHTML = misHtml;
+            userGrid.innerHTML = userHtml;
+        }
+
+        // Calculate column totals dynamically for Manpower Entry
+        function calcManpowerTotal(dIdx) {
+            const dept = manpowerConfig[dIdx];
+            let sumB3 = 0;
+            let sumB5 = 0;
+            
+            ensureArray(dept.tasks).forEach((_, tIdx) => {
+                const b3Input = document.getElementById(`user-mp-b3-${dIdx}-${tIdx}`);
+                const b5Input = document.getElementById(`user-mp-b5-${dIdx}-${tIdx}`);
+                
+                if(b3Input && b3Input.value) sumB3 += parseInt(b3Input.value) || 0;
+                if(b5Input && b5Input.value) sumB5 += parseInt(b5Input.value) || 0;
+            });
+            
+            const b3TotEl = document.getElementById(`user-mp-tot-b3-${dIdx}`);
+            const b5TotEl = document.getElementById(`user-mp-tot-b5-${dIdx}`);
+            
+            if(b3TotEl) b3TotEl.innerText = sumB3 > 0 ? sumB3 : '';
+            if(b5TotEl) b5TotEl.innerText = sumB5 > 0 ? sumB5 : '';
+        }
+
+        // Dashboard manpower dynamic population based on requested logic
+        function updateTargetManpower() {
+            const mpData = JSON.parse(localStorage.getItem(`data_manpower_${currentDateStr}`)) || {};
+            
+            function getMpVal(dIdx, tIdx, bldg) { return parseInt(mpData[`${bldg}_${dIdx}_${tIdx}`]) || 0; }
+            function getDIdx(id) { return manpowerConfig.findIndex(d => d.id === id); }
+            
+            function calcDept(deptId, bldg = 'both', excludeTasks = []) {
+                const dIdx = getDIdx(deptId);
+                if (dIdx === -1) return 0;
+                let sum = 0;
+                manpowerConfig[dIdx].tasks.forEach((task, tIdx) => {
+                    if (excludeTasks.some(ex => task.toLowerCase().includes(ex.toLowerCase()))) return;
+                    if (bldg === 'b3' || bldg === 'both') sum += getMpVal(dIdx, tIdx, 'b3');
+                    if (bldg === 'b5' || bldg === 'both') sum += getMpVal(dIdx, tIdx, 'b5');
+                });
+                return sum;
+            }
+
+            function calcTask(taskNames, bldg = 'both') {
+                let sum = 0;
+                manpowerConfig.forEach((dept, dIdx) => {
+                    dept.tasks.forEach((task, tIdx) => {
+                        if (taskNames.some(tn => task.toLowerCase().includes(tn.toLowerCase()))) {
+                            if (bldg === 'b3' || bldg === 'both') sum += getMpVal(dIdx, tIdx, 'b3');
+                            if (bldg === 'b5' || bldg === 'both') sum += getMpVal(dIdx, tIdx, 'b5');
+                        }
+                    });
+                });
+                return sum;
+            }
+
+            let grandTotal = 0;
+            targetDepts.forEach((deptName, i) => {
+                let val = null;
+                const dn = deptName.toUpperCase();
+                
+                if (dn === "QC") val = calcDept('qc');
+                else if (dn === "GRN-3") val = calcDept('grn', 'b3', ['Cycle Count', 'QC Checking']);
+                else if (dn === "GRN-5") val = calcDept('grn', 'b5', ['Cycle Count', 'QC Checking']);
+                else if (dn === "PUTAWAY-3") val = calcDept('putaway', 'b3', ['Cycle Count', 'QC Checking']);
+                else if (dn === "PUTAWAY-5") val = calcDept('putaway', 'b5', ['Cycle Count', 'QC Checking']);
+                else if (dn === "CYCLE COUNT") val = calcTask(['Cycle Count']);
+                else if (dn === "FORWARD BLDG-03") val = calcDept('fwd', 'b3', ['Ajio']);
+                else if (dn === "FORWARD BLDG-05") val = calcDept('fwd', 'b5', ['Ajio']);
+                else if (dn === "TAG CHANGE") val = calcDept('tag');
+                else if (dn === "RTV - PICK") val = calcDept('rtv', 'both', ['M2M', 'Cycle Count']);
+                else if (dn === "RTV - PACK") val = null; // merged mapping
+                else if (dn === "PHOTOSHOOT") val = calcDept('photo', 'both', ['Catalogue']);
+                else if (dn === "CLAIMS") val = calcDept('claims');
+                else if (dn === "REFINISHING") val = calcDept('refinish');
+                else if (dn === "OTHER_BRAND") val = calcDept('other_brand');
+                else if (dn === "NEW-MANPOWER") val = 0;
+                else if (dn === "AJIO SCAN") val = calcTask(['Ajio']);
+                else if (dn === "CATALOUGE") val = calcTask(['Catalogue']);
+                else if (dn === "QC CHECK") val = calcTask(['QC Checking']);
+                else if (dn === "M2M") val = calcTask(['M2M']);
+                else val = 0; // Default generic mapping for newly added rows
+
+                if (val !== null) {
+                    grandTotal += val;
+                    const cell = document.getElementById(`mis-tgt-mp-${i}`);
+                    if (cell) cell.innerText = val > 0 ? val : '';
+                }
+            });
+
+            const totCell = document.getElementById(`mis-tgt-mp-total`);
+            if (totCell) totCell.innerText = grandTotal > 0 ? grandTotal : '';
+        }
+
+        // ================= CORE DASHBOARD INITIALIZATION =================
+        function initDashboard() {
+            buildTargetTables();
+            buildPendencyTables();
+            buildManpowerTables();
+            handleDateChange();
+        }
+
+        // ================= FIREBASE SYNC & INIT =================
+        let isAppInitialized = false;
+
+        function safeInit() {
+            if (isAppInitialized) return;
+            isAppInitialized = true;
+            finishAppInitialization();
+        }
+
+        window.onload = () => {
+            setTimeout(safeInit, 1200);
+
+            // CHANGED TO .on('value') FOR REAL-TIME SYNC & REFRESH RETENTION
+            dbRoot.on('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    for (const key in data) {
+                        const val = data[key];
+                        localStorage.setItem(key, typeof val === 'object' ? JSON.stringify(val) : val);
+                    }
+                }
+                
+                if (isAppInitialized) {
+                    // Update arrays on live sync
+                    const rTd = JSON.parse(localStorage.getItem('target_depts_config'));
+                    const rPd = JSON.parse(localStorage.getItem('pendency_depts_config'));
+                    if (rTd) targetDepts = ensureArray(rTd);
+                    if (rPd) pendencyDepts = ensureArray(rPd);
+                    
+                    wmsUsers = ensureArray(JSON.parse(localStorage.getItem('wms_users')));
+                    populateLoginUsers();
+                    
+                    uiControlsState = JSON.parse(localStorage.getItem('ui_controls_config')) || {};
+                    if(document.getElementById('admin-container').style.display !== 'none') {
+                        renderUIControls();
+                    }
+
+                    if (document.getElementById('admin-container').style.display !== 'none') {
+                        renderAdminUsers();
+                        loadAdminModulesList();
+                    }
+                    if (document.getElementById('app-container').style.display !== 'none') {
+                        try { handleDateChange(); checkFormLocks(); } catch(e) {}
+                    }
+                } else {
+                    safeInit();
+                }
+            });
+        };
+
+        function finishAppInitialization() {
+            const loader = document.getElementById('db-loading');
+            if (loader) loader.style.display = 'none';
+
+            // DYNAMIC ARRAYS INIT
+            const storedTDepts = JSON.parse(localStorage.getItem('target_depts_config'));
+            const storedPDepts = JSON.parse(localStorage.getItem('pendency_depts_config'));
+            
+            targetDepts = storedTDepts ? ensureArray(storedTDepts) : [...defaultTargetDepts];
+            pendencyDepts = storedPDepts ? ensureArray(storedPDepts) : [...defaultPendencyDepts];
+
+            let rawMp = JSON.parse(localStorage.getItem('manpower_config'));
+            
+            // CACHE BUSTING: Force reset to default to apply GRN and Putaway split if old structure is found
+            if(rawMp && rawMp.some(d => d.id === 'grn_put')) {
+                rawMp = null;
+            }
+            
+            if(rawMp) {
+                manpowerConfig = ensureArray(rawMp);
+                manpowerConfig.forEach(dept => {
+                    dept.authCat = ensureArray(dept.authCat);
+                    dept.tasks = ensureArray(dept.tasks);
+                });
+            } else {
+                manpowerConfig = defaultManpowerConfig;
+            }
+            
+            reportEmails = ensureArray(JSON.parse(localStorage.getItem('wms_report_emails')));
+            wmsUsers = ensureArray(JSON.parse(localStorage.getItem('wms_users')));
+            uiControlsState = JSON.parse(localStorage.getItem('ui_controls_config')) || {};
+
+            buildManpowerTables();
+
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            
+            const adminDateEl = document.getElementById('admin-data-date');
+            if (adminDateEl) adminDateEl.value = `${yyyy}-${mm}-${dd}`;
+            
+            const globalDateEl = document.getElementById('global-date');
+            if (globalDateEl) globalDateEl.value = `${yyyy}-${mm}-${dd}`;
+
+            const jumpDataStr = localStorage.getItem('admin_jump_trigger');
+            const sessionStr = localStorage.getItem('active_session');
+
+            if (jumpDataStr) {
+                const jumpData = JSON.parse(jumpDataStr);
+                if (Date.now() - jumpData.timestamp < 5000) { 
+                    removeFromDB('admin_jump_trigger');
+                    isAdminMode = true;
+                    loggedInUser = { name: "ADMIN_OVERRIDE" };
+                    userPermissions = {};
+                    
+                    document.getElementById("banner-welcome-text").innerText = `Welcome, Admin Workspace`;
+                    document.getElementById("welcome-banner").classList.remove('hidden');
+                    
+                    document.getElementById("login-container").style.display = "none";
+                    document.getElementById("app-container").style.display = "flex";
+                    
+                    startLiveClock();
+                    initDashboard();
+                    
+                    const modCategory = sidebarModules.find(m => m.id === jumpData.modId)?.category;
+                    if(modCategory === 'MIS') {
+                        document.getElementById('mis-nav-group').style.display = 'block';
+                        document.getElementById('mis-icon').style.transform = 'rotate(90deg)';
+                    } else if (modCategory === 'USER') {
+                        document.getElementById('user-nav-group').style.display = 'block';
+                        document.getElementById('user-icon').style.transform = 'rotate(90deg)';
+                    }
+                    
+                    setTimeout(() => {
+                        const link = document.querySelector(`.module-link[data-mod="${jumpData.modId}"]`);
+                        showSection(jumpData.modId, link);
+                    }, 50);
+                    
+                    return; 
+                }
+            } else if (sessionStr) {
+                // PERSISTENT LOGIN ON HARD REFRESH
+                const session = JSON.parse(sessionStr);
+                if (session.isAdmin) {
+                    isAdminMode = true;
+                    loggedInUser = { name: "ADMIN_OVERRIDE" };
+                    userPermissions = {};
+                    
+                    document.getElementById("login-container").style.display = "none";
+                    document.getElementById("admin-container").style.display = "flex";
+                    renderAdminUsers();
+                    loadAdminModulesList();
+                    renderUIControls();
+                } else {
+                    const userIndex = wmsUsers.findIndex(u => u.name === session.uid);
+                    if (userIndex !== -1) {
+                        isAdminMode = false;
+                        loggedInUser = wmsUsers[userIndex];
+                        userPermissions = JSON.parse(localStorage.getItem(`auth_${loggedInUser.name}`)) || {};
+                        
+                        document.getElementById("banner-welcome-text").innerText = `Welcome, ${loggedInUser.name}`;
+                        document.getElementById("welcome-banner").classList.remove('hidden');
+                        
+                        document.getElementById("login-container").style.display = "none";
+                        document.getElementById("app-container").style.display = "flex";
+                        
+                        startLiveClock();
+                        initDashboard();
+                        
+                        const lastSec = localStorage.getItem('last_active_section');
+                        if(lastSec && lastSec !== 'welcome-screen') {
+                            const link = document.querySelector(`.module-link[data-mod="${lastSec}"]`);
+                            if(link) {
+                                const cat = sidebarModules.find(m => m.id === lastSec)?.category;
+                                if(cat === 'MIS') {
+                                    document.getElementById('mis-nav-group').style.display = 'block';
+                                    document.getElementById('mis-icon').style.transform = 'rotate(90deg)';
+                                } else if (cat === 'USER') {
+                                    document.getElementById('user-nav-group').style.display = 'block';
+                                    document.getElementById('user-icon').style.transform = 'rotate(90deg)';
+                                }
+                                setTimeout(() => showSection(lastSec, link), 50);
+                            } else {
+                                document.getElementById('welcome-screen').style.display = 'block';
+                            }
+                        } else {
+                            document.getElementById('welcome-screen').style.display = 'block';
+                        }
+                    }
+                }
+            }
+
+            populateLoginUsers();
+            populateAuthUserDropdown();
+            initDeptConfig();
+            initTaskSetup(); 
+            renderAdminOverviewLinks();
+            renderAdminEmails(); 
+            renderUIControls();
+        }
+
+        function startLiveClock() {
+            if(clockInterval) clearInterval(clockInterval);
+            clockInterval = setInterval(() => {
+                const now = new Date();
+                document.getElementById('banner-live-clock').innerText = now.toLocaleString('en-IN', { 
+                    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', 
+                    hour: '2-digit', minute: '2-digit', second: '2-digit' 
+                });
+            }, 1000);
+        }
+
+        // ================= CENTRAL CSV UPLOAD ENGINE =================
+        function parseCSV(file) {
+            return new Promise((resolve, reject) => {
+                if(!file) { resolve(null); return; }
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = err => reject(err);
+                reader.readAsText(file);
+            });
+        }
+
+        // Custom CSV Line Parser to handle commas inside quotes accurately
+        function parseCSVLine(text) {
+            let ret = [], inQuote = false, value = '';
+            for (let i = 0; i < text.length; i++) {
+                let char = text[i];
+                if (inQuote) {
+                    if (char === '"') {
+                        if (i + 1 < text.length && text[i + 1] === '"') { value += '"'; i++; } 
+                        else { inQuote = false; }
+                    } else { value += char; }
+                } else {
+                    if (char === '"') { inQuote = true; }
+                    else if (char === ',') { ret.push(value); value = ''; }
+                    else { value += char; }
+                }
+            }
+            ret.push(value);
+            return ret.map(v => v.trim());
+        }
+
+        async function uploadCentralCSV(type, silent = false) {
+            let fileInput, file, text;
+            
+            // Check locks before uploading
+            const lockKey = `lock_${type === 'overall' ? 'overall-putaway' : type === 'putaway' ? 'putaway-bldg-wise' : 'returns-po'}_${currentDateStr}`;
+            if (localStorage.getItem(lockKey)) {
+                if(!silent) alert("This upload is locked for the selected date. Admin access is required to re-upload.");
+                return false;
+            }
+
+            if (type === 'overall') {
+                fileInput = document.getElementById('csv-upload-overall-central');
+                file = fileInput.files[0];
+                if (!file && !silent) { alert("Please select a file for Overall Putaway Pending upload."); return false; }
+                if (!file) return false;
+                
+                text = await parseCSV(file);
+                const rows = text.split('\n').filter(row => row.trim() !== '');
+                
+                let data = { grn: 0, lost: 0, offline: 0, recycle: 0, packed: 0, picked: 0, new: 0 };
+                
+                if (rows.length > 0) {
+                    const headers = rows[0].split(',').map(h => h.trim().replace(/['"]+/g, ''));
+                    let statusColIndex = headers.findIndex(h => h.toLowerCase().includes('item status'));
+                    
+                    if (statusColIndex === -1) {
+                        statusColIndex = 9; 
+                    }
+
+                    for (let i = 1; i < rows.length; i++) {
+                        const cols = rows[i].split(',').map(c => c.trim().replace(/['"]+/g, '').toUpperCase());
+                        
+                        if (cols.length > statusColIndex) {
+                            const status = cols[statusColIndex];
+                            
+                            if (status.includes('GRN')) data.grn++;
+                            if (status.includes('LOST')) data.lost++;
+                            if (status.includes('OFFLINE')) data.offline++;
+                            if (status.includes('RECYCLE')) data.recycle++;
+                            if (status.includes('PACKED')) data.packed++;
+                            if (status.includes('PICKED')) data.picked++;
+                            if (status.includes('NEW')) data.new++;
+                        }
+                    }
+                }
+                
+                saveToDB(`data_overall-putaway_${currentDateStr}`, JSON.stringify(data));
+                saveToDB(`lock_overall-putaway_${currentDateStr}`, "1");
+                renderOverallPutaway();
+                fileInput.value = ''; 
+                if(!silent) { alert("Overall Putaway Data Uploaded and Calculated Successfully!"); checkFormLocks(); }
+                return true;
+            }
+            else if (type === 'putaway') {
+                fileInput = document.getElementById('csv-upload-putaway-central');
+                file = fileInput.files[0];
+                if (!file && !silent) { alert("Please select a file for Putaway pending bldg wise upload."); return false; }
+                if (!file) return false;
+
+                text = await parseCSV(file);
+                const rows = text.split('\n').filter(row => row.trim() !== '');
+                
+                let groupedB3 = {};
+                let groupedB5 = {};
+
+                if (rows.length > 0) {
+                    const headers = rows[0].split(',').map(h => h.trim().replace(/['"]+/g, ''));
+                    let statusColIndex = headers.findIndex(h => h.toLowerCase().includes('item status'));
+                    let bldgColIndex = headers.findIndex(h => h.toLowerCase().includes('fulfillment location name'));
+                    let dateColIndex = headers.findIndex(h => h.toLowerCase().includes('status updated at'));
+                    
+                    if (statusColIndex === -1) statusColIndex = 9; 
+                    if (bldgColIndex === -1) bldgColIndex = 15; 
+                    if (dateColIndex === -1) dateColIndex = 7; 
+
+                    function parseDDMMYYYY(raw) {
+                        if(!raw) return null;
+                        
+                        let cleaned = raw.trim();
+                        let datePart = cleaned.split(' ')[0];
+                        
+                        let dObj = null;
+                        if(datePart.includes('-')) {
+                            let parts = datePart.split('-');
+                            if(parts[0].length === 4) { // YYYY-MM-DD
+                                dObj = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+                            } else { // DD-MM-YYYY
+                                dObj = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+                            }
+                        } else if (datePart.includes('/')) {
+                            let parts = datePart.split('/');
+                            dObj = new Date(parseInt(parts[2]), parseInt(parts[0])-1, parseInt(parts[1]));
+                        } else {
+                            dObj = new Date(raw); 
+                        }
+
+                        if(dObj && !isNaN(dObj.getTime())) {
+                            return {
+                                ts: dObj.getTime(), 
+                                dObj: dObj,
+                                str: String(dObj.getDate()).padStart(2, '0') + '-' + String(dObj.getMonth() + 1).padStart(2, '0') + '-' + dObj.getFullYear()
+                            };
+                        }
+                        return { ts: 0, str: datePart, dObj: null }; 
+                    }
+
+                    // Strict Month/Year isolation for Dashboard logic
+                    const dashDateObj = new Date(currentDateStr);
+                    const dashM = dashDateObj.getMonth();
+                    const dashY = dashDateObj.getFullYear();
+                    const mNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+                    for (let i = 1; i < rows.length; i++) {
+                        const safeCols = rows[i].split(',').map(c => c.trim().replace(/['"]+/g, '').toUpperCase());
+
+                        if (safeCols.length > Math.max(statusColIndex, bldgColIndex, dateColIndex)) {
+                            const status = safeCols[statusColIndex];
+                            const bldgStr = safeCols[bldgColIndex];
+                            const rawDate = safeCols[dateColIndex];
+                            const parsedDateObj = parseDDMMYYYY(rawDate);
+                            
+                            if(!parsedDateObj) continue;
+                            
+                            let displayDateKey = parsedDateObj.str;
+                            let groupTs = parsedDateObj.ts;
+
+                            // If not in the "Current Month" (Dashboard global date month), aggregate it
+                            if (parsedDateObj.dObj) {
+                                if (parsedDateObj.dObj.getMonth() !== dashM || parsedDateObj.dObj.getFullYear() !== dashY) {
+                                    displayDateKey = mNames[parsedDateObj.dObj.getMonth()] + "-" + parsedDateObj.dObj.getFullYear();
+                                    groupTs = new Date(parsedDateObj.dObj.getFullYear(), parsedDateObj.dObj.getMonth(), 1).getTime();
+                                }
+                            }
+                            
+                            let targetMap = null;
+                            if (bldgStr.includes('BLDG3') || bldgStr.includes('BLDG 3') || bldgStr === '3') targetMap = groupedB3;
+                            else if (bldgStr.includes('BLDG5') || bldgStr.includes('BLDG 5') || bldgStr === '5') targetMap = groupedB5;
+
+                            if (targetMap && displayDateKey) {
+                                if (!targetMap[displayDateKey]) {
+                                    targetMap[displayDateKey] = { ts: groupTs, grn: 0, lost: 0, offline: 0, recycle: 0, packed: 0, picked: 0, new: 0 };
+                                }
+                                if (status.includes('GRN')) targetMap[displayDateKey].grn++;
+                                if (status.includes('LOST')) targetMap[displayDateKey].lost++;
+                                if (status.includes('OFFLINE')) targetMap[displayDateKey].offline++;
+                                if (status.includes('RECYCLE')) targetMap[displayDateKey].recycle++;
+                                if (status.includes('PACKED')) targetMap[displayDateKey].packed++;
+                                if (status.includes('PICKED')) targetMap[displayDateKey].picked++;
+                                if (status.includes('NEW')) targetMap[displayDateKey].new++;
+                            }
+                        }
+                    }
+                }
+                
+                const finalB3 = Object.keys(groupedB3).map(date => {
+                    const d = groupedB3[date];
+                    return {
+                        ts: d.ts, date: date, grn: d.grn, lost: d.lost, offline: d.offline, recycle: d.recycle, 
+                        packed: d.packed, picked: d.picked, new: d.new,
+                        total: d.grn + d.lost + d.offline + d.recycle + d.packed + d.picked + d.new
+                    };
+                });
+                
+                const finalB5 = Object.keys(groupedB5).map(date => {
+                    const d = groupedB5[date];
+                    return {
+                        ts: d.ts, date: date, grn: d.grn, lost: d.lost, offline: d.offline, recycle: d.recycle, 
+                        packed: d.packed, picked: d.picked, new: d.new,
+                        total: d.grn + d.lost + d.offline + d.recycle + d.packed + d.picked + d.new
+                    };
+                });
+
+                // Sort Oldest to Newest
+                finalB3.sort((a, b) => a.ts - b.ts);
+                finalB5.sort((a, b) => a.ts - b.ts);
+
+                saveToDB(`data_putaway-bldg-wise_${currentDateStr}`, JSON.stringify({b3: finalB3, b5: finalB5}));
+                saveToDB(`lock_putaway-bldg-wise_${currentDateStr}`, "1");
+                renderPutawayBldgWiseTable();
+                fileInput.value = ''; 
+                if(!silent) { alert("Putaway Bldg Wise Uploaded & Calculated Successfully!"); checkFormLocks(); }
+                return true;
+            }
+            else if (type === 'po') {
+                fileInput = document.getElementById('csv-upload-po-central');
+                file = fileInput.files[0];
+                if (!file && !silent) { alert("Please select a file for Return po wise grn pending upload."); return false; }
+                if (!file) return false;
+
+                text = await parseCSV(file);
+                const rows = text.split('\n').filter(row => row.trim() !== '');
+                
+                let poMap = {};
+                for (let i = 1; i < rows.length; i++) {
+                    const cols = parseCSVLine(rows[i]);
+                    // Only process rows that have enough columns for Pending Qty
+                    if (cols.length >= 39) {
+                        let poDate = cols[5]; // F (index 5)
+                        let poNo = cols[8];   // I (index 8)
+                        let poQty = parseFloat(cols[32]) || 0; // AG (index 32)
+                        let recQty = parseFloat(cols[35]) || 0; // AJ (index 35)
+                        let penQty = parseFloat(cols[38]) || 0; // AM (index 38)
+                        
+                        if(!poDate || !poNo) continue;
+                        
+                        let key = poDate + '|' + poNo;
+                        if(!poMap[key]) {
+                            poMap[key] = { poDate, poNo, poQty: 0, recQty: 0, penQty: 0 };
+                        }
+                        poMap[key].poQty += poQty;
+                        poMap[key].recQty += recQty;
+                        poMap[key].penQty += penQty;
+                    }
+                }
+                
+                // Only retain data where the Pending GRN Qty > 0
+                const parsedData = Object.values(poMap).filter(row => row.penQty > 0);
+
+                saveToDB(`data_returns-po_${currentDateStr}`, JSON.stringify(parsedData));
+                saveToDB(`lock_returns-po_${currentDateStr}`, "1");
+                renderReturnsPOTable();
+                fileInput.value = ''; 
+                if(!silent) { alert("Returns PO Uploaded Successfully!"); checkFormLocks(); }
+                return true;
+            }
+        }
+
+        async function uploadAllCentralCSV() {
+            const r1 = await uploadCentralCSV('overall', true);
+            const r2 = await uploadCentralCSV('putaway', true);
+            const r3 = await uploadCentralCSV('po', true);
+            
+            if(r1 || r2 || r3) { 
+                alert("Selected files processed successfully! (Note: Locked files were ignored)."); 
+                checkFormLocks();
+            } 
+            else { alert("No valid/unlocked files were processed."); }
+        }
+
+        function clearUploadedFiles() {
+            document.getElementById('csv-upload-overall-central').value = '';
+            document.getElementById('csv-upload-putaway-central').value = '';
+            document.getElementById('csv-upload-po-central').value = '';
+            alert("File selections cleared.\n(Note: Your previously uploaded data remains securely saved in the system).");
+        }
+
+        // ================= RENDERING FUNCTIONS =================
+        function renderOverallPutaway() {
+            const data = JSON.parse(localStorage.getItem(`data_overall-putaway_${currentDateStr}`)) || { grn: 0, lost: 0, offline: 0, recycle: 0, packed: 0, picked: 0, new: 0 };
+            
+            const formatVal = (val) => val === 0 ? '' : val;
+
+            if(document.getElementById('op-grn')) {
+                document.getElementById('op-grn').innerText = formatVal(data.grn);
+                document.getElementById('op-lost').innerText = formatVal(data.lost);
+                document.getElementById('op-offline').innerText = formatVal(data.offline);
+                document.getElementById('op-recycle').innerText = formatVal(data.recycle);
+                document.getElementById('op-packed').innerText = formatVal(data.packed);
+                document.getElementById('op-picked').innerText = formatVal(data.picked);
+                document.getElementById('op-new').innerText = formatVal(data.new);
+                
+                let total = data.grn + data.lost + data.offline + data.recycle + data.packed + data.picked + data.new;
+                document.getElementById('op-total').innerText = formatVal(total);
+            }
+        }
+
+        function renderReturnsPOTable() {
+            const wrapper = document.getElementById('returns-po-table-wrapper');
+            const data = ensureArray(JSON.parse(localStorage.getItem(`data_returns-po_${currentDateStr}`)));
+            let html = '';
+            let tPo = 0, tRec = 0, tPen = 0;
+
+            if(data.length === 0) {
+                html = `<tr><td colspan="5" class="text-gray-500 py-6 font-medium bg-gray-50">No data available. Please upload a CSV file via the File Upload Section.</td></tr>`;
+            } else {
+                data.forEach(row => {
+                    html += `<tr class="hover:bg-gray-50 transition">
+                        <td class="font-semibold text-gray-800 border-l border-gray-400">${row.poDate || ''}</td>
+                        <td class="font-semibold text-gray-800">${row.poNo || ''}</td>
+                        <td>${row.poQty || ''}</td>
+                        <td>${row.recQty || ''}</td><td class="text-red-600 font-bold border-r border-gray-400">${row.penQty || ''}</td>
+                    </tr>`;
+                    tPo += parseFloat(row.poQty) || 0;
+                    tRec += parseFloat(row.recQty) || 0;
+                    tPen += parseFloat(row.penQty) || 0;
+                });
+                
+                html += `<tr class="border-t-2 border-black bg-gray-100 font-bold">
+                    <td colspan="2" class="text-right py-3 pr-4 uppercase text-black border-l border-gray-400">Grand Total</td>
+                    <td class="text-black">${tPo}</td>
+                    <td class="text-black">${tRec}</td>
+                    <td class="text-red-600 text-lg border-r border-gray-400">${tPen}</td>
+                </tr>`;
+            }
+            if(wrapper) {
+                wrapper.innerHTML = `<table class="thick-border-table" style="width: 100%;">
+                    <thead>
+                        <tr><th colspan="5" class="bg-gray-header" style="font-size: 18px; padding: 12px;">Returns PO wise GRN Pending</th></tr>
+                        <tr><th>PO Date</th><th>PO NO</th><th>PO Qty</th><th>Recieved Qty</th><th>Pending Qty</th></tr>
+                    </thead>
+                    <tbody id="returns-po-tbody">${html}</tbody>
+                </table>`;
+            }
+        }
+
+        function renderPutawayBldgWiseTable() {
+            const rawData = JSON.parse(localStorage.getItem(`data_putaway-bldg-wise_${currentDateStr}`)) || {b3: [], b5: []};
+            const data = { b3: ensureArray(rawData.b3), b5: ensureArray(rawData.b5) };
+            
+            const formatVal = (val) => val === 0 ? '' : val;
+
+            const buildTableHtml = (arr, tbodyId, tfootId) => {
+                let html = '';
+                let sums = { grn: 0, lost: 0, offline: 0, recycle: 0, packed: 0, picked: 0, new: 0, total: 0 };
+                
+                if(arr.length === 0) {
+                    html = `<tr><td colspan="9" class="text-gray-500 py-6 font-medium bg-gray-50">No data available. Please upload a CSV file via the File Upload Section.</td></tr>`;
+                } else {
+                    arr.forEach(r => {
+                        html += `<tr class="hover:bg-gray-50 transition border-b border-gray-300">
+                            <td class="font-semibold text-gray-800 border-l border-gray-400">${r.date}</td>
+                            <td>${formatVal(r.grn)}</td>
+                            <td>${formatVal(r.lost)}</td>
+                            <td>${formatVal(r.offline)}</td>
+                            <td>${formatVal(r.recycle)}</td>
+                            <td>${formatVal(r.packed)}</td>
+                            <td>${formatVal(r.picked)}</td>
+                            <td>${formatVal(r.new)}</td>
+                            <td class="font-bold text-gray-800 border-r border-gray-400">${formatVal(r.total)}</td>
+                        </tr>`;
+                        sums.grn += r.grn; sums.lost += r.lost; sums.offline += r.offline;
+                        sums.recycle += r.recycle; sums.packed += r.packed; sums.picked += r.picked;
+                        sums.new += r.new; sums.total += r.total;
+                    });
+                }
+                
+                let tfootHtml = '';
+                if(arr.length > 0) {
+                    tfootHtml = `<tr class="border border-black">
+                        <td class="py-3 uppercase tracking-wider text-black text-left pl-4">Grand Total</td>
+                        <td class="text-black">${formatVal(sums.grn)}</td>
+                        <td class="text-black">${formatVal(sums.lost)}</td>
+                        <td class="text-black">${formatVal(sums.offline)}</td>
+                        <td class="text-black">${formatVal(sums.recycle)}</td>
+                        <td class="text-black">${formatVal(sums.packed)}</td>
+                        <td class="text-black">${formatVal(sums.picked)}</td>
+                        <td class="text-black">${formatVal(sums.new)}</td>
+                        <td class="text-red-600 text-lg border-l border-gray-300 border-r border-black">${formatVal(sums.total)}</td>
+                    </tr>`;
+                }
+                
+                return `
+                <table class="thick-border-table mt-0" style="width: 100%;">
+                    <thead><tr><th>DATE</th><th>GRN</th><th>LOST</th><th>OFFLINE</th><th>RECYCLE</th><th>PACKED</th><th>PICKED</th><th>NEW</th><th>Grand Total</th></tr></thead>
+                    <tbody id="${tbodyId}">${html}</tbody>
+                    <tfoot id="${tfootId}" class="bg-gray-100 font-bold">${tfootHtml}</tfoot>
+                </table>`;
+            };
+            
+            const wrapperB3 = document.getElementById('putaway-b3-wrapper');
+            if(wrapperB3) wrapperB3.innerHTML = buildTableHtml(data.b3, 'putaway-b3-tbody', 'putaway-b3-tfoot');
+
+            const wrapperB5 = document.getElementById('putaway-b5-wrapper');
+            if(wrapperB5) wrapperB5.innerHTML = buildTableHtml(data.b5, 'putaway-b5-tbody', 'putaway-b5-tfoot');
+        }
+
+        // ================= ADMIN EMAIL CONFIG =================
+        function renderAdminEmails() {
+            const tbody = document.getElementById('admin-email-list');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            reportEmails.forEach((email, idx) => {
+                tbody.innerHTML += `<tr class="border-b">
+                    <td class="p-2 border font-medium text-gray-800">${email}</td>
+                    <td class="p-2 border text-center">
+                        <button onclick="deleteAdminEmail(${idx})" class="text-red-600 font-bold hover:underline">Delete</button>
+                    </td>
+                </tr>`;
+            });
+        }
+        function saveAdminEmail() {
+            const emailInput = document.getElementById('add-email-input');
+            const email = emailInput.value.trim();
+            if(!email || !email.includes('@')) { alert("Please enter a valid email address."); return; }
+            if(!reportEmails.includes(email)) {
+                reportEmails.push(email);
+                saveToDB('wms_report_emails', JSON.stringify(reportEmails));
+                emailInput.value = '';
+                renderAdminEmails();
+            } else { alert("Email already exists."); }
+        }
+        function deleteAdminEmail(idx) {
+            if(confirm("Delete this email?")) {
+                reportEmails.splice(idx, 1);
+                saveToDB('wms_report_emails', JSON.stringify(reportEmails));
+                renderAdminEmails();
+            }
+        }
+
+        // ================= ADMIN DYNAMIC DEPTS CONFIG =================
+        function initDeptConfig() {
+            draftTargetDepts = [...targetDepts];
+            draftPendencyDepts = [...pendencyDepts];
+            renderDeptConfigUI();
+        }
+
+        function renderDeptConfigUI() {
+            let tHtml = '';
+            draftTargetDepts.forEach((d, i) => {
+                tHtml += `<li class="mb-2 flex items-center gap-2">
+                    <input type="text" class="border p-2 text-sm flex-grow outline-none focus:border-blue-500 rounded font-semibold text-gray-700" value="${d}" onchange="draftTargetDepts[${i}] = this.value">
+                    <button type="button" onclick="removeTargetDept(${i})" class="text-red-500 font-bold px-3 py-1 bg-red-50 hover:bg-red-100 rounded border border-red-200">X</button>
+                </li>`;
+            });
+            document.getElementById('admin-target-depts-list').innerHTML = tHtml;
+
+            let pHtml = '';
+            draftPendencyDepts.forEach((d, i) => {
+                pHtml += `<li class="mb-2 flex items-center gap-2">
+                    <input type="text" class="border p-2 text-sm flex-grow outline-none focus:border-green-500 rounded font-semibold text-gray-700" value="${d}" onchange="draftPendencyDepts[${i}] = this.value">
+                    <button type="button" onclick="removePendencyDept(${i})" class="text-red-500 font-bold px-3 py-1 bg-red-50 hover:bg-red-100 rounded border border-red-200">X</button>
+                </li>`;
+            });
+            document.getElementById('admin-pendency-depts-list').innerHTML = pHtml;
+        }
+
+        function addTargetDept() { draftTargetDepts.push("NEW DEPARTMENT"); renderDeptConfigUI(); }
+        function removeTargetDept(i) { draftTargetDepts.splice(i, 1); renderDeptConfigUI(); }
+        function addPendencyDept() { draftPendencyDepts.push("NEW DEPARTMENT"); renderDeptConfigUI(); }
+        function removePendencyDept(i) { draftPendencyDepts.splice(i, 1); renderDeptConfigUI(); }
+
+        function saveDashboardDepts() {
+            targetDepts = [...draftTargetDepts];
+            pendencyDepts = [...draftPendencyDepts];
+            
+            saveToDB('target_depts_config', JSON.stringify(targetDepts));
+            saveToDB('pendency_depts_config', JSON.stringify(pendencyDepts));
+            
+            document.getElementById('dept-save-msg').classList.remove('hidden');
+            document.getElementById('dept-save-msg').style.display = 'inline-flex';
+            setTimeout(() => { document.getElementById('dept-save-msg').classList.add('hidden'); document.getElementById('dept-save-msg').style.display = 'none';}, 2000);
+            
+            buildTargetTables();
+            buildPendencyTables();
+            try { if(currentDateStr) checkFormLocks(); } catch(e){}
+        }
+
+        // ================= TASK MANAGEMENT =================
+        function initTaskSetup() {
+            draftTasks = JSON.parse(JSON.stringify(manpowerConfig));
+            renderTaskSetup();
+        }
+
+        function renderTaskSetup() {
+            let html = '';
+            draftTasks.forEach((dept, dIdx) => {
+                html += `<div class="border p-4 bg-white shadow-sm rounded-lg relative">
+                    <div class="flex justify-between items-center mb-2">
+                        <input type="text" class="border p-1 font-bold text-gray-800 w-2/3" value="${dept.name}" onchange="draftTasks[${dIdx}].name = this.value">
+                        <button type="button" onclick="removeDraftDept(${dIdx})" class="text-red-500 font-bold text-xs bg-red-50 px-2 py-1 rounded hover:bg-red-100">Delete Dept</button>
+                    </div>
+                    <div class="mb-3 text-xs text-gray-600 flex items-center">
+                        <span class="mr-2">Auth Map:</span> 
+                        <input type="text" class="border p-1 flex-grow outline-none focus:border-blue-500 text-purple-700 font-bold" value="${ensureArray(dept.authCat).join(', ')}" onchange="draftTasks[${dIdx}].authCat = this.value.split(',').map(s=>s.trim())">
+                    </div>
+                    <ul class="list-none pl-0 max-h-48 overflow-y-auto mb-2 border-t pt-2">`;
+                ensureArray(dept.tasks).forEach((task, tIdx) => {
+                    html += `<li class="mb-1 flex items-center gap-2">
+                        <input type="text" class="border p-1 text-xs flex-grow outline-none focus:border-blue-500" value="${task}" onchange="draftTasks[${dIdx}].tasks[${tIdx}] = this.value">
+                        <button type="button" onclick="removeDraftTask(${dIdx}, ${tIdx})" class="text-red-400 text-xs font-bold px-2 hover:text-red-600">X</button>
+                    </li>`;
+                });
+                html += `</ul>
+                    <button type="button" onclick="addDraftTask(${dIdx})" class="text-blue-600 text-xs font-bold">+ Add Task</button>
+                </div>`;
+            });
+            if(document.getElementById('admin-tasks-container')) document.getElementById('admin-tasks-container').innerHTML = html;
+        }
+
+        function addDraftDept() { draftTasks.push({ id: 'dept_'+Date.now(), name: 'New Department', authCat: ['OTHER'], tasks: ['New Task'] }); renderTaskSetup(); }
+        function removeDraftDept(dIdx) { if(confirm('Delete entire department?')) { draftTasks.splice(dIdx, 1); renderTaskSetup(); } }
+        function addDraftTask(dIdx) { draftTasks[dIdx].tasks.push('New Task'); renderTaskSetup(); }
+        function removeDraftTask(dIdx, tIdx) { draftTasks[dIdx].tasks.splice(tIdx, 1); renderTaskSetup(); }
+        
+        function saveAdminTasks() {
+            manpowerConfig = JSON.parse(JSON.stringify(draftTasks));
+            saveToDB('manpower_config', JSON.stringify(manpowerConfig));
+            document.getElementById('task-save-msg').classList.remove('hidden');
+            document.getElementById('task-save-msg').style.display = 'inline-flex';
+            setTimeout(() => { document.getElementById('task-save-msg').classList.add('hidden'); document.getElementById('task-save-msg').style.display = 'none';}, 2000);
+            
+            buildManpowerTables(); 
+            try { if(currentDateStr) checkFormLocks(); } catch(e){}
+        }
+
+        // ================= ADMIN MODAL, LOGIN & OTP SYSTEM =================
+        function openAdminModal() {
+            document.getElementById('admin-modal-pass').value = "";
+            document.getElementById('admin-modal-pass').type = "password";
+            document.getElementById('admin-pass-toggle-btn').innerText = "Show";
+            document.getElementById('admin-login-modal').classList.remove('hidden');
+            document.getElementById('admin-login-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('admin-modal-pass').focus(), 100);
+        }
+        function closeAdminModal() {
+            document.getElementById('admin-login-modal').classList.add('hidden');
+            document.getElementById('admin-login-modal').style.display = 'none';
+        }
+        function toggleAdminPass() {
+            const input = document.getElementById('admin-modal-pass');
+            const btn = document.getElementById('admin-pass-toggle-btn');
+            if(input.type === 'password') { input.type = 'text'; btn.innerText = 'Hide'; } 
+            else { input.type = 'password'; btn.innerText = 'Show'; }
+        }
+
+        function openAdminForgotModal() {
+            closeAdminModal();
+            document.getElementById('admin-forgot-modal').style.display = 'flex';
+            document.getElementById('admin-forgot-modal').classList.remove('hidden');
+        }
+        function closeAdminForgotModal() {
+            document.getElementById('admin-forgot-modal').style.display = 'none';
+            document.getElementById('admin-forgot-modal').classList.add('hidden');
+        }
+
+        function verifyAdminPhoneAndSendOTP() {
+            const phone = document.getElementById('admin-recovery-phone').value.trim();
+            if(phone.length === 10 && simpleHash(phone) === -246695277) {
+                generatedOTP = Math.floor(10000 + Math.random() * 90000).toString();
+                closeAdminForgotModal();
+                document.getElementById('admin-otp-modal').style.display = 'flex';
+                document.getElementById('admin-otp-modal').classList.remove('hidden');
+                
+                alert(`DEMO SMS GATEWAY\n\nYour Admin Recovery OTP is: ${generatedOTP}\n\n(In production, this is sent via REST API to Fast2SMS/Twilio).`);
+            } else {
+                alert("Incorrect Mobile Number. Please enter the registered admin mobile number.");
+            }
+        }
+        function simpleHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                hash |= 0;
+            }
+            return hash;
+        }
+
+        function cancelOTPFlow() {
+            document.getElementById('admin-otp-modal').style.display = 'none';
+            document.getElementById('admin-otp-modal').classList.add('hidden');
+            generatedOTP = null;
+        }
+
+        function verifyAdminOTP() {
+            const entered = document.getElementById('admin-recovery-otp').value.trim();
+            if(entered === generatedOTP) {
+                cancelOTPFlow();
+                document.getElementById('admin-reset-modal').style.display = 'flex';
+                document.getElementById('admin-reset-modal').classList.remove('hidden');
+            } else {
+                alert("Incorrect OTP!");
+            }
+        }
+
+        function saveNewAdminPassword() {
+            const newPass = document.getElementById('admin-new-pass').value.trim();
+            if(newPass.length < 4) { alert("Password too short."); return; }
+            saveToDB('admin_master_pass', newPass);
+            alert("Admin password updated successfully!");
+            document.getElementById('admin-reset-modal').style.display = 'none';
+            document.getElementById('admin-reset-modal').classList.add('hidden');
+            openAdminModal();
+        }
+
+        function submitAdminLogin() {
+            const pass = document.getElementById('admin-modal-pass').value;
+            const validPass = localStorage.getItem('admin_master_pass') || "lucky5";
+            
+            if (pass === validPass) {
+                isAdminMode = true; 
+                localStorage.setItem('active_session', JSON.stringify({ uid: 'ADMIN_OVERRIDE', isAdmin: true }));
+                closeAdminModal();
+                document.getElementById("login-container").style.display = "none";
+                document.getElementById("admin-container").style.display = "flex";
+                renderAdminUsers();
+                loadAdminModulesList();
+                renderUIControls();
+            } else { alert("Incorrect Admin Password!"); }
+        }
+
+        function populateLoginUsers() {
+            const select = document.getElementById("user-id");
+            if(!select) return;
+            select.innerHTML = '<option value="">Select User ID</option>';
+            wmsUsers.forEach(u => { select.innerHTML += `<option value="${u.name}">${u.name}</option>`; });
+        }
+        function userLogin() {
+            const uid = document.getElementById("user-id").value;
+            const pass = document.getElementById("user-pass").value;
+            if(uid === "") { alert("Please select a User ID."); return; }
+            
+            const userIndex = wmsUsers.findIndex(u => u.name === uid);
+            if(userIndex !== -1) {
+                const user = wmsUsers[userIndex];
+                if(user.pass === "") {
+                    if(pass === "") { alert("Your password is not set. Please type a new password and click Login to set it permanently."); return; } 
+                    else {
+                        wmsUsers[userIndex].pass = pass;
+                        saveToDB('wms_users', JSON.stringify(wmsUsers));
+                        alert("Your new password has been saved successfully!");
+                    }
+                } else if(user.pass !== pass) {
+                    alert("Incorrect Password!"); return;
+                }
+                
+                isAdminMode = false;
+                loggedInUser = wmsUsers[userIndex];
+                userPermissions = JSON.parse(localStorage.getItem(`auth_${loggedInUser.name}`)) || {};
+                
+                localStorage.setItem('active_session', JSON.stringify({ uid: loggedInUser.name, isAdmin: false }));
+                localStorage.setItem('last_active_section', 'welcome-screen');
+
+                document.getElementById("banner-welcome-text").innerText = `Welcome, ${loggedInUser.name}`;
+                document.getElementById("welcome-banner").classList.remove('hidden');
+                
+                document.getElementById("login-container").style.display = "none";
+                document.getElementById("app-container").style.display = "flex";
+                
+                document.querySelectorAll('.module-section').forEach(sec => sec.style.display = 'none');
+                document.getElementById('welcome-screen').style.display = 'block';
+                document.getElementById('page-title').innerText = "Dashboard";
+                
+                startLiveClock();
+                initDashboard();
+            }
+        }
+        function logout() {
+            loggedInUser = null; userPermissions = {}; isAdminMode = false;
+            localStorage.removeItem('active_session');
+            localStorage.removeItem('last_active_section');
+            if(clockInterval) clearInterval(clockInterval);
+            document.getElementById("app-container").style.display = "none";
+            document.getElementById("admin-container").style.display = "none";
+            document.getElementById("login-container").style.display = "flex";
+            document.getElementById("user-pass").value = ""; document.getElementById("user-id").value = "";
+            document.getElementById('welcome-banner').classList.add('hidden');
+            
+            document.getElementById('mis-nav-group').style.display = 'none'; 
+            document.getElementById('mis-icon').style.transform = 'rotate(0deg)';
+            document.getElementById('user-nav-group').style.display = 'none'; 
+            document.getElementById('user-icon').style.transform = 'rotate(0deg)';
+            
+            const dbHeader = document.getElementById('dashboard-global-header');
+            if(dbHeader) { dbHeader.style.display = 'none'; dbHeader.classList.add('hidden'); }
+        }
+
+        // ================= ADMIN PANEL LOGIC =================
+        function switchAdminTab(tabId) {
+            document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        function jumpToModuleFromAdmin(modId) {
+            saveToDB('admin_jump_trigger', JSON.stringify({ modId: modId, timestamp: Date.now() }));
+            window.open(window.location.href, '_blank');
+        }
+
+        function renderAdminOverviewLinks() {
+            let misHtml = ''; let userHtml = '';
+            sidebarModules.forEach(mod => {
+                if (mod.id === 'dashboard-section') return; 
+                const linkStr = `<a href="#" onclick="jumpToModuleFromAdmin('${mod.id}')" class="text-blue-700 hover:text-blue-900 font-semibold hover:underline py-1 block">&rarr; ${mod.name}</a>`;
+                if (mod.category === 'MIS') { misHtml += linkStr; } 
+                else if (mod.category === 'USER') { userHtml += linkStr.replace(/blue/g, 'green'); }
+            });
+            if(document.getElementById('admin-mis-links')) document.getElementById('admin-mis-links').innerHTML = misHtml;
+            if(document.getElementById('admin-user-links')) document.getElementById('admin-user-links').innerHTML = userHtml;
+        }
+
+        function renderAdminUsers() {
+            const tbody = document.getElementById('admin-users-list');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            wmsUsers.forEach((u, idx) => {
+                const passDisplay = u.pass === "" ? '<span class="text-red-500 font-bold text-xs">Not Set</span>' : u.pass;
+                tbody.innerHTML += `
+                    <tr class="border-b">
+                        <td class="p-2 border">${u.name}</td>
+                        <td class="p-2 border text-gray-800 font-medium">${passDisplay}</td>
+                        <td class="p-2 border text-center">
+                            <button onclick="editAdminUser(${idx})" class="text-blue-600 font-bold hover:underline mr-3">Edit</button>
+                            <button onclick="resetAdminUserPassword(${idx})" class="text-orange-500 font-bold hover:underline mr-3">Reset Pass</button>
+                            <button onclick="deleteAdminUser(${idx})" class="text-red-600 font-bold hover:underline">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+        function saveAdminUser() {
+            const name = document.getElementById('add-u-name').value.trim();
+            const pass = document.getElementById('add-u-pass').value.trim();
+            const editIndex = parseInt(document.getElementById('edit-user-index').value);
+            if(!name) { alert("Please fill User Name field!"); return; }
+
+            if(editIndex >= 0) wmsUsers[editIndex] = {name, pass};
+            else wmsUsers.push({name, pass});
+
+            saveToDB('wms_users', JSON.stringify(wmsUsers));
+            populateLoginUsers(); populateAuthUserDropdown(); clearUserForm(); renderAdminUsers();
+        }
+        function editAdminUser(idx) {
+            document.getElementById('add-u-name').value = wmsUsers[idx].name;
+            document.getElementById('add-u-pass').value = wmsUsers[idx].pass;
+            document.getElementById('edit-user-index').value = idx;
+        }
+        function resetAdminUserPassword(idx) {
+            const newPass = prompt(`Enter new password for ${wmsUsers[idx].name}:`);
+            if(newPass !== null && newPass.trim() !== "") {
+                wmsUsers[idx].pass = newPass.trim();
+                saveToDB('wms_users', JSON.stringify(wmsUsers));
+                renderAdminUsers(); alert("Password reset successfully.");
+            }
+        }
+        function deleteAdminUser(idx) {
+            if(confirm("Are you sure you want to delete this user?")) {
+                wmsUsers.splice(idx, 1);
+                saveToDB('wms_users', JSON.stringify(wmsUsers));
+                populateLoginUsers(); populateAuthUserDropdown(); renderAdminUsers();
+            }
+        }
+        function clearUserForm() {
+            document.getElementById('add-u-name').value = ''; document.getElementById('add-u-pass').value = '';
+            document.getElementById('edit-user-index').value = '-1';
+        }
+
+        function populateAuthUserDropdown() {
+            const select = document.getElementById('auth-user-select');
+            if(!select) return;
+            select.innerHTML = '<option value="">-- Select User --</option><option value="ADMIN_OVERRIDE">** SUPER ADMIN (All Access) **</option>';
+            wmsUsers.forEach(u => select.innerHTML += `<option value="${u.name}">${u.name}</option>`);
+        }
+        
+        function buildAuthGrid() {
+            const section = document.getElementById('auth-section-select').value;
+            const tbody = document.getElementById('auth-grid-body');
+            if(!tbody) return;
+            let html = '';
+            const filteredModules = sidebarModules.filter(mod => mod.category === section && mod.id !== 'dashboard-section' && mod.id !== 'data-file-upload');
+            
+            filteredModules.forEach(mod => {
+                html += `<tr><td class="font-bold border-r-2 border-gray-400 bg-gray-50 text-xs">${mod.name.replace(' (Data Entry)', '').replace(' (MIS View)', '')}</td>`;
+                subCols.forEach(sc => { html += `<td class="text-center ${sc==='QC'?'border-l-2 border-gray-400':''}"><input type="checkbox" class="auth-cb" data-mod="${mod.id}" data-bldg="Bldg3" data-sub="${sc}"></td>`; });
+                subCols.forEach(sc => { html += `<td class="text-center ${sc==='QC'?'border-l-2 border-gray-400':''}"><input type="checkbox" class="auth-cb" data-mod="${mod.id}" data-bldg="Bldg5" data-sub="${sc}"></td>`; });
+                html += `</tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function loadUserAuthGrid() {
+            buildAuthGrid(); 
+            const uname = document.getElementById('auth-user-select').value;
+            const cbs = document.querySelectorAll('.auth-cb');
+            document.getElementById('auth-grid-container').classList.remove('hidden');
+            
+            if(!uname) { cbs.forEach(cb => cb.checked = false); document.getElementById('auth-grid-container').classList.add('hidden'); return; }
+            if(uname === "ADMIN_OVERRIDE") { cbs.forEach(cb => cb.checked = true); return; }
+
+            const perms = JSON.parse(localStorage.getItem(`auth_${uname}`)) || {};
+            cbs.forEach(cb => {
+                const mod = cb.dataset.mod; const bldg = cb.dataset.bldg; const sub = cb.dataset.sub;
+                cb.checked = perms[mod] && ensureArray(perms[mod][bldg]).includes(sub);
+            });
+            document.getElementById('auth-save-msg').classList.add('hidden');
+        }
+
+        function saveUserAuthGrid() {
+            const uname = document.getElementById('auth-user-select').value;
+            if(!uname || uname === "ADMIN_OVERRIDE") { alert("Cannot save for this selection."); return; }
+            
+            let perms = JSON.parse(localStorage.getItem(`auth_${uname}`)) || {};
+            const currentSection = document.getElementById('auth-section-select').value;
+            
+            const filteredModules = sidebarModules.filter(m => m.category === currentSection && m.id !== 'dashboard-section' && m.id !== 'data-file-upload');
+            filteredModules.forEach(m => { delete perms[m.id]; });
+
+            document.querySelectorAll('.auth-cb').forEach(cb => {
+                if(cb.checked) {
+                    const mod = cb.dataset.mod; const bldg = cb.dataset.bldg; const sub = cb.dataset.sub;
+                    if(!perms[mod]) perms[mod] = {};
+                    if(!perms[mod][bldg]) perms[mod][bldg] = [];
+                    perms[mod][bldg].push(sub);
+                }
+            });
+            saveToDB(`auth_${uname}`, JSON.stringify(perms));
+            document.getElementById('auth-save-msg').classList.remove('hidden');
+            setTimeout(() => document.getElementById('auth-save-msg').classList.add('hidden'), 2000);
+        }
+
+        function loadAdminModulesList() {
+            const dateVal = document.getElementById('admin-data-date').value;
+            const container = document.getElementById('admin-modules-list');
+            if(!dateVal || !container) { if(container) container.classList.add('hidden'); return; }
+            
+            container.classList.remove('hidden');
+            let html = '';
+            
+            const adminManagementModules = [
+                { dataKey: 'target-board', name: 'Data Entry Page' },
+                { dataKey: 'dept-pendency', name: 'Dept. Pendency (Data Entry)' },
+                { dataKey: 'manpower', name: 'Manpower Detail Entry' },
+                { dataKey: 'overall-putaway', name: 'Overall Putaway (Upload)' },
+                { dataKey: 'putaway-bldg-wise', name: 'Putaway Bldg Wise (Upload)' },
+                { dataKey: 'returns-po', name: 'Returns PO (Upload)' }
+            ];
+
+            adminManagementModules.forEach(mod => {
+                const isLocked = localStorage.getItem(`lock_${mod.dataKey}_${dateVal}`);
+                const statusBadge = isLocked ? `<span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">Locked (Saved)</span>` : `<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Active (Open)</span>`;
+                const btnActivate = isLocked ? `<button onclick="adminActivateModule('${mod.dataKey}', '${dateVal}')" class="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold py-1 px-3 rounded shadow transition">Activate (Unlock)</button>` : '';
+                
+                html += `
+                    <div class="flex justify-between items-center p-3 border bg-white rounded shadow-sm">
+                        <div><span class="font-bold text-gray-800">${mod.name}</span> <span class="ml-2">${statusBadge}</span></div>
+                        <div class="flex gap-2">
+                            <button onclick="adminEditModuleData('${mod.dataKey}', '${dateVal}', '${mod.name}')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1 px-3 rounded shadow transition">Edit Data</button>
+                            <button onclick="adminDeleteModuleDataDirect('${mod.dataKey}', '${dateVal}')" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-3 rounded shadow transition">Delete Data</button>
+                            ${btnActivate}
+                        </div>
+                    </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function adminActivateModule(dataKey, dateVal) {
+            if(confirm("This will unlock the module so data can be re-entered or re-uploaded. Continue?")) {
+                removeFromDB(`lock_${dataKey}_${dateVal}`);
+                loadAdminModulesList();
+                try { checkFormLocks(); } catch(e) {}
+            }
+        }
+
+        function adminDeleteModuleDataDirect(dataKey, dateVal) {
+            if(confirm(`Are you sure you want to permanently delete all data and locks for ${dataKey} on ${dateVal}?`)) {
+                removeFromDB(`data_${dataKey}_${dateVal}`);
+                removeFromDB(`lock_${dataKey}_${dateVal}`);
+                try { handleDateChange(); } catch(e) {}
+                loadAdminModulesList();
+                alert("Data deleted successfully.");
+            }
+        }
+
+        function adminDeleteModuleData() {
+            if(confirm("Are you sure you want to permanently clear/delete all data for this module on this date?")) {
+                removeFromDB(adminEditingKey);
+                const dateStr = adminEditingKey.split('_').pop();
+                const lockKey = `lock_${adminEditingModule}_${dateStr}`;
+                removeFromDB(lockKey);
+                
+                closeAdminEditor();
+                try { handleDateChange(); } catch(e) {}
+                loadAdminModulesList();
+                alert("Data and locks cleared successfully.");
+            }
+        }
+
+        function adminEditModuleData(dataKey, dateVal, modName) {
+            adminEditingKey = `data_${dataKey}_${dateVal}`;
+            adminEditingModule = dataKey; 
+            const rawData = localStorage.getItem(adminEditingKey);
+            const data = rawData ? JSON.parse(rawData) : {};
+
+            document.getElementById('admin-data-editor').classList.remove('hidden');
+            document.getElementById('admin-editor-title').innerText = `Editing: ${modName} for ${dateVal}`;
+            const container = document.getElementById('admin-editor-content');
+            
+            let html = `
+            <div class="mb-4 flex justify-between items-center bg-red-50 p-3 border border-red-200 rounded shadow-sm">
+                <span class="text-red-700 text-sm font-bold">Clear / Delete entire data for this date?</span>
+                <button onclick="adminDeleteModuleData()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1.5 px-4 rounded shadow transition">Delete Data</button>
+            </div>`;
+
+            if (dataKey === 'target-board') {
+                html += `<table class="w-full text-left text-sm border"><thead class="bg-gray-200"><tr><th class="p-2 border">Department</th><th class="p-2 border">Achieve</th><th class="p-2 border">Target</th></tr></thead><tbody>`;
+                targetDepts.forEach((dept, i) => {
+                    const aVal = (data[i] && data[i].achieve) !== undefined ? data[i].achieve : '';
+                    const tVal = (data[i] && data[i].target) !== undefined ? data[i].target : '';
+                    html += `<tr><td class="p-2 border font-semibold">${dept}</td>
+                             <td class="p-1 border"><input type="number" id="admin-tgt-a-${i}" value="${aVal}" class="w-full border p-1 rounded admin-col-achieve"></td>
+                             <td class="p-1 border"><input type="number" id="admin-tgt-t-${i}" value="${tVal}" class="w-full border p-1 rounded admin-col-target"></td></tr>`;
+                });
+                html += `</tbody></table>`;
+            } else if (dataKey === 'dept-pendency') {
+                html += `<table class="w-full text-left text-sm border"><thead class="bg-gray-200"><tr><th class="p-2 border">Department</th><th class="p-2 border">Bldg#3</th><th class="p-2 border">Bldg#5</th></tr></thead><tbody>`;
+                pendencyDepts.forEach((dept, i) => {
+                    html += `<tr><td class="p-2 border font-semibold">${dept}</td>
+                        <td class="p-1 border"><input type="number" id="admin-pen-b3-${i}" value="${data[`b3_${i}`]||''}" class="w-full border p-1 rounded admin-col-b3"></td>
+                        <td class="p-1 border"><input type="number" id="admin-pen-b5-${i}" value="${data[`b5_${i}`]||''}" class="w-full border p-1 rounded admin-col-b5"></td></tr>`;
+                });
+                html += `</tbody></table>`;
+            } else if (dataKey === 'manpower') {
+                html += `<div class="columns-1 md:columns-2 gap-4">`;
+                manpowerConfig.forEach((dept, dIdx) => {
+                    html += `<div class="break-inside-avoid mb-4 bg-white border border-gray-300 rounded overflow-hidden shadow-sm">
+                        <div class="bg-gray-800 text-white p-1 text-center font-bold text-xs uppercase tracking-wider">${dept.name}</div>
+                        <table class="mp-table w-full text-xs">
+                            <thead><tr><th>Tasks</th><th>Bldg#3</th><th>Bldg#5</th></tr></thead><tbody>`;
+                    ensureArray(dept.tasks).forEach((task, tIdx) => {
+                        html += `<tr><td>${task}</td>
+                            <td class="p-0"><input type="number" id="admin-mp-b3-${dIdx}-${tIdx}" value="${data[`b3_${dIdx}_${tIdx}`]||''}" class="w-full border-none text-center p-1 outline-none focus:ring-1 admin-col-b3"></td>
+                            <td class="p-0"><input type="number" id="admin-mp-b5-${dIdx}-${tIdx}" value="${data[`b5_${dIdx}_${tIdx}`]||''}" class="w-full border-none text-center p-1 outline-none focus:ring-1 admin-col-b5"></td>
+                        </tr>`;
+                    });
+                    html += `</tbody></table></div>`;
+                });
+                html += `</div>`;
+            } else {
+                try { newData = JSON.parse(document.getElementById('admin-generic-data').value); } 
+                catch(e) { alert("Invalid JSON format."); return; }
+            }
+            container.innerHTML = html;
+        }
+
+        function closeAdminEditor() { document.getElementById('admin-data-editor').classList.add('hidden'); }
+
+        function adminSaveModifiedData() {
+            let newData = {};
+            if (adminEditingModule === 'target-board') {
+                targetDepts.forEach((dept, i) => { 
+                    newData[i] = {
+                        target: document.getElementById(`admin-tgt-t-${i}`).value,
+                        achieve: document.getElementById(`admin-tgt-a-${i}`).value
+                    };
+                });
+            } else if (adminEditingModule === 'dept-pendency') {
+                pendencyDepts.forEach((dept, i) => {
+                    newData[`b3_${i}`] = document.getElementById(`admin-pen-b3-${i}`).value;
+                    newData[`b5_${i}`] = document.getElementById(`admin-pen-b5-${i}`).value;
+                });
+            } else if (adminEditingModule === 'manpower') {
+                manpowerConfig.forEach((dept, dIdx) => {
+                    ensureArray(dept.tasks).forEach((task, tIdx) => {
+                        newData[`b3_${dIdx}_${tIdx}`] = document.getElementById(`admin-mp-b3-${dIdx}-${tIdx}`).value;
+                        newData[`b5_${dIdx}_${tIdx}`] = document.getElementById(`admin-mp-b5-${dIdx}-${tIdx}`).value;
+                    });
+                });
+            } else {
+                try { newData = JSON.parse(document.getElementById('admin-generic-data').value); } 
+                catch(e) { alert("Invalid JSON format."); return; }
+            }
+            saveToDB(adminEditingKey, JSON.stringify(newData));
+            document.getElementById('admin-data-msg').classList.remove('hidden');
+            setTimeout(() => document.getElementById('admin-data-msg').classList.add('hidden'), 2000);
+            
+            try { handleDateChange(); } catch(e) {}
+        }
+
+        // ================= SECTION NAVIGATION =================
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('hidden-sidebar'); }
+
+        function toggleNav(groupId, iconId) {
+            const group = document.getElementById(groupId);
+            const icon = document.getElementById(iconId);
+            if(group.style.display === 'none') {
+                group.style.display = 'block';
+                icon.style.transform = 'rotate(90deg)';
+            } else {
+                group.style.display = 'none';
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function getTargetSubCategory(deptName) {
+            const d = deptName.toUpperCase();
+            if(d.includes("QC")) return "QC";
+            if(d.includes("GRN")) return "GRN";
+            if(d.includes("PUTAWAY")) return "PUTAWAY";
+            if(d.includes("CLAIMS")) return "CLAIMS";
+            if(d.includes("REFIN")) return "REFIN";
+            if(d.includes("RTV")) return "RTV";
+            if(d.includes("CYCLE")) return "CYCLE";
+            if(d.includes("FORWARD")) return "FWD";
+            if(d.includes("M2M")) return "M2M";
+            if(d.includes("PHOTO")) return "PHOTO";
+            return "OTHER";
+        }
+
+        function hasPerm(mod, bldg, subCat) {
+            if (!userPermissions[mod]) return false;
+            const arr = userPermissions[mod][bldg];
+            if (!arr) return false;
+            if (Array.isArray(arr)) return arr.includes(subCat);
+            if (typeof arr === 'object') return Object.values(arr).includes(subCat);
+            return false;
+        }
+
+        function checkModuleAccess(modId) {
+            if(isAdminMode || (loggedInUser && loggedInUser.name === "ADMIN_OVERRIDE")) return true;
+            const p = userPermissions[modId];
+            if(!p) return false;
+            for(let bldg in p) {
+                if(ensureArray(p[bldg]).length > 0) return true;
+            }
+            return false;
+        }
+
+        function showSection(sectionId, elementRef) {
+            if(sectionId !== 'welcome-screen' && sectionId !== 'dashboard-section' && sectionId !== 'data-file-upload' && !checkModuleAccess(sectionId)) {
+                alert("You are not authorized to use this section.");
+                return; 
+            }
+
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            if(elementRef) elementRef.classList.add('active');
+
+            document.querySelectorAll('.module-section').forEach(sec => sec.style.display = 'none');
+            
+            const dbHeader = document.getElementById('dashboard-global-header');
+            if(dbHeader) { dbHeader.style.display = 'none'; dbHeader.classList.add('hidden'); }
+
+            localStorage.setItem('last_active_section', sectionId);
+
+            if (sectionId === 'dashboard-section') {
+                if(dbHeader) { dbHeader.style.display = 'flex'; dbHeader.classList.remove('hidden'); }
+                
+                const misSections = ['target-board', 'mis-dept-pendency', 'mis-manpower', 'overall-putaway', 'putaway-bldg-wise', 'returns-po'];
+                let shownAny = false;
+                misSections.forEach(id => {
+                    if (checkModuleAccess(id)) {
+                        const targetSec = document.getElementById(id);
+                        if(targetSec) { targetSec.style.display = 'block'; shownAny = true; }
+                    }
+                });
+                if (!shownAny) {
+                    document.getElementById('welcome-screen').style.display = 'block';
+                }
+            } else {
+                const targetSec = document.getElementById(sectionId);
+                if(targetSec) targetSec.style.display = 'block';
+            }
+            
+            if(elementRef) {
+                const pt = document.getElementById('page-title');
+                if(pt) pt.innerText = elementRef.innerText;
+            }
+        }
+
+        function handleDateChange() {
+            const globalDateEl = document.getElementById('global-date');
+            if(!globalDateEl) return;
+            const dateVal = globalDateEl.value;
+            if(!dateVal) return;
+            currentDateStr = dateVal; 
+            const d = new Date(dateVal);
+            const yDate = new Date(d); yDate.setDate(yDate.getDate() - 1);
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            
+            const hdToday = document.getElementById('header-today-date');
+            if(hdToday) hdToday.innerText = `${String(d.getDate()).padStart(2,'0')}-${months[d.getMonth()]}`;
+            
+            const hdYest = document.getElementById('header-yesterday-date');
+            if(hdYest) hdYest.innerText = `${String(yDate.getDate()).padStart(2,'0')}-${months[yDate.getMonth()]}`;
+
+            try { checkFormLocks(); } catch(e) { console.error("Lock error", e); }
+            try { renderReturnsPOTable(); } catch(e) {}
+            try { renderPutawayBldgWiseTable(); } catch(e) {}
+            try { renderOverallPutaway(); } catch(e) {}
+            
+            if(manpowerConfig.length > 0) {
+                manpowerConfig.forEach((dept, dIdx) => {
+                    try { calcManpowerTotal(dIdx); } catch(e) {}
+                });
+            }
+        }
+
+        // ================= AUTH & LOCK LOGIC =================
+        function applySidebarAuth() {
+            let hasMisLinks = false;
+            let hasUserLinks = false;
+            
+            sidebarModules.forEach(mod => {
+                if(mod.category === 'MIS' && mod.id !== 'dashboard-section' && mod.id !== 'data-file-upload' && checkModuleAccess(mod.id)) {
+                    hasMisLinks = true;
+                }
+            });
+            
+            const isUI = (id) => uiControlsState[id] !== false;
+            
+            const uploadLink = document.getElementById('link-file-upload');
+            if (uploadLink) uploadLink.style.display = (hasMisLinks && isUI('link-file-upload')) ? 'block' : 'none';
+
+            const dashLink = document.getElementById('link-dashboard');
+            if (dashLink) dashLink.style.display = (hasMisLinks && isUI('link-dashboard')) ? 'block' : 'none';
+            
+            document.querySelectorAll('#user-nav-group .module-link').forEach(link => {
+                if (checkModuleAccess(link.dataset.mod) && isUI(link.id)) {
+                    link.style.display = 'block';
+                    hasUserLinks = true;
+                } else {
+                    link.style.display = 'none';
+                }
+            });
+            
+            const mh = document.getElementById('mis-heading');
+            if(mh) mh.style.display = hasMisLinks ? 'flex' : 'none';
+            
+            const uh = document.getElementById('user-heading');
+            if(uh) uh.style.display = hasUserLinks ? 'flex' : 'none';
+        }
+
+        function checkFormLocks() {
+            applySidebarAuth(); 
+            const isSuperAdmin = isAdminMode || (loggedInUser && loggedInUser.name === "ADMIN_OVERRIDE");
+            const isUI = (id) => uiControlsState[id] !== false; // Check global enable/disable state
+
+            // Upload Sections Locks Check
+            const opLocked = localStorage.getItem(`lock_overall-putaway_${currentDateStr}`);
+            const pbwLocked = localStorage.getItem(`lock_putaway-bldg-wise_${currentDateStr}`);
+            const poLocked = localStorage.getItem(`lock_returns-po_${currentDateStr}`);
+
+            const fileOp = document.getElementById('csv-upload-overall-central');
+            const btnOp = document.getElementById('btn-upload-overall');
+            const msgOp = document.getElementById('msg-lock-overall');
+            if (fileOp) fileOp.disabled = opLocked || !isUI('btn-upload-overall');
+            if (btnOp) btnOp.disabled = opLocked || !isUI('btn-upload-overall');
+            if (msgOp) msgOp.style.display = opLocked ? 'block' : 'none';
+
+            const filePbw = document.getElementById('csv-upload-putaway-central');
+            const btnPbw = document.getElementById('btn-upload-putaway');
+            const msgPbw = document.getElementById('msg-lock-putaway');
+            if (filePbw) filePbw.disabled = pbwLocked || !isUI('btn-upload-putaway');
+            if (btnPbw) btnPbw.disabled = pbwLocked || !isUI('btn-upload-putaway');
+            if (msgPbw) msgPbw.style.display = pbwLocked ? 'block' : 'none';
+
+            const filePo = document.getElementById('csv-upload-po-central');
+            const btnPo = document.getElementById('btn-upload-po');
+            const msgPo = document.getElementById('msg-lock-po');
+            if (filePo) filePo.disabled = poLocked || !isUI('btn-upload-po');
+            if (btnPo) btnPo.disabled = poLocked || !isUI('btn-upload-po');
+            if (msgPo) msgPo.style.display = poLocked ? 'block' : 'none';
+            
+            const btnAll = document.getElementById('btn-upload-all');
+            if (btnAll) btnAll.disabled = (opLocked && pbwLocked && poLocked) || !isUI('btn-upload-all');
+
+            const btnClear = document.getElementById('btn-clear-files');
+            if (btnClear) btnClear.disabled = !isUI('btn-clear-files');
+
+            const btnCopy = document.getElementById('btn-copy-text');
+            if (btnCopy) btnCopy.disabled = !isUI('btn-copy-text');
+
+            const btnDownload = document.getElementById('btn-download-excel');
+            if (btnDownload) btnDownload.disabled = !isUI('btn-download-excel');
+
+            const btnPrint = document.getElementById('btn-print-a4');
+            if (btnPrint) btnPrint.disabled = !isUI('btn-print-a4');
+
+            const btnEmail = document.getElementById('btn-email-report');
+            if (btnEmail) btnEmail.disabled = !isUI('btn-email-report');
+
+            // ================= TARGET DASHBOARD (MIS View) =================
+            const yDateObj = new Date(currentDateStr);
+            yDateObj.setDate(yDateObj.getDate() - 1);
+            const yyyy = yDateObj.getFullYear();
+            const mm = String(yDateObj.getMonth() + 1).padStart(2, '0');
+            const dd = String(yDateObj.getDate()).padStart(2, '0');
+            const yDateStr = `${yyyy}-${mm}-${dd}`;
+
+            const misTgtDataToday = JSON.parse(localStorage.getItem(`data_target-board_${currentDateStr}`)) || {};
+            const misTgtDataYest = JSON.parse(localStorage.getItem(`data_target-board_${yDateStr}`)) || {};
+            
+            const misTbody = document.getElementById('mis-target-tbody');
+            if(misTbody) {
+                const misTargetRows = misTbody.querySelectorAll('tr');
+                
+                let totYt = 0, totYa = 0, totTt = 0;
+
+                targetDepts.forEach((deptName, i) => {
+                    try {
+                        const tr = misTargetRows[i];
+                        if(!tr) return;
+
+                        const tdYestTarget = document.getElementById(`mis-tgt-yt-${i}`);
+                        const tdYestAchieve = document.getElementById(`mis-tgt-ya-${i}`);
+                        const tdTodayTarget = document.getElementById(`mis-tgt-tt-${i}`);
+
+                        const ytVal = misTgtDataYest[i]?.target || '';
+                        const yaVal = misTgtDataYest[i]?.achieve || '';
+                        const ttVal = misTgtDataToday[i]?.target || '';
+
+                        if(tdYestTarget) tdYestTarget.innerText = ytVal;
+                        if(tdYestAchieve) tdYestAchieve.innerText = yaVal;
+                        if(tdTodayTarget) tdTodayTarget.innerText = ttVal;
+
+                        totYt += parseInt(ytVal) || 0;
+                        totYa += parseInt(yaVal) || 0;
+                        totTt += parseInt(ttVal) || 0;
+
+                        let b3Auth = false; let b5Auth = false;
+                        if (isSuperAdmin) { 
+                            b3Auth = true; b5Auth = true; 
+                        } else {
+                            const subCat = getTargetSubCategory(deptName);
+                            b3Auth = hasPerm('target-board', 'Bldg3', subCat);
+                            b5Auth = hasPerm('target-board', 'Bldg5', subCat);
+                        }
+                        if (deptName.includes("3") || deptName.includes("03")) b5Auth = false;
+                        if (deptName.includes("5") || deptName.includes("05")) b3Auth = false;
+
+                        if(!b3Auth && !b5Auth) tr.style.display = 'none';
+                        else tr.style.display = '';
+                    } catch(e) { console.error(e); }
+                });
+
+                // Set totals
+                const tdYtTot = document.getElementById('mis-tgt-yt-total');
+                const tdYaTot = document.getElementById('mis-tgt-ya-total');
+                const tdTtTot = document.getElementById('mis-tgt-tt-total');
+                if(tdYtTot) tdYtTot.innerText = totYt;
+                if(tdYaTot) tdYaTot.innerText = totYa;
+                if(tdTtTot) tdTtTot.innerText = totTt;
+            }
+
+            // ================= TARGET DASHBOARD (USER ENTRY View) =================
+            const aDateEl = document.getElementById('achieve-date');
+            const tDateEl = document.getElementById('target-date');
+            const aDate = aDateEl ? aDateEl.value : null;
+            const tDate = tDateEl ? tDateEl.value : null;
+
+            const aData = aDate ? JSON.parse(localStorage.getItem(`data_target-board_${aDate}`)) || {} : {};
+            const tData = tDate ? JSON.parse(localStorage.getItem(`data_target-board_${tDate}`)) || {} : {};
+
+            const aLocked = aDate ? localStorage.getItem(`lock_target-board_${aDate}`) : false;
+            const tLocked = tDate ? localStorage.getItem(`lock_target-board_${tDate}`) : false;
+
+            const userTbody = document.getElementById('user-target-tbody');
+            if(userTbody) {
+                const userTargetRows = userTbody.querySelectorAll('tr');
+                targetDepts.forEach((deptName, i) => {
+                    try {
+                        const tr = userTargetRows[i];
+                        if(!tr) return;
+                        
+                        const achInput = document.getElementById(`achieve-${i}`);
+                        const tgtInput = document.getElementById(`target-${i}`);
+                        
+                        if(achInput) achInput.value = (aData[i] && aData[i].achieve) !== undefined ? aData[i].achieve : '';
+                        if(tgtInput) tgtInput.value = (tData[i] && tData[i].target) !== undefined ? tData[i].target : '';
+
+                        let b3Auth = false; let b5Auth = false;
+                        if (isSuperAdmin) { 
+                            b3Auth = true; b5Auth = true; 
+                        } else {
+                            const subCat = getTargetSubCategory(deptName);
+                            b3Auth = hasPerm('user-data-entry', 'Bldg3', subCat);
+                            b5Auth = hasPerm('user-data-entry', 'Bldg5', subCat);
+                        }
+                        if (deptName.includes("3") || deptName.includes("03")) b5Auth = false;
+                        if (deptName.includes("5") || deptName.includes("05")) b3Auth = false;
+
+                        if(!b3Auth && !b5Auth) {
+                            tr.style.display = 'none';
+                        } else {
+                            tr.style.display = '';
+                            if(achInput) {
+                                if(aLocked || !aDate) { achInput.readOnly = true; achInput.classList.add('locked-input'); }
+                                else { achInput.readOnly = false; achInput.classList.remove('locked-input'); }
+                            }
+                            if(tgtInput) {
+                                if(tLocked || !tDate) { tgtInput.readOnly = true; tgtInput.classList.add('locked-input'); }
+                                else { tgtInput.readOnly = false; tgtInput.classList.remove('locked-input'); }
+                            }
+                        }
+                    } catch(e){}
+                });
+            }
+
+            const btnSaveTarget = document.getElementById('btn-save-target');
+            if (btnSaveTarget) btnSaveTarget.disabled = !isUI('btn-save-target');
+
+            // ================= DEPT PENDENCY =================
+            const penData = JSON.parse(localStorage.getItem(`data_dept-pendency_${currentDateStr}`)) || {};
+            const penLocked = localStorage.getItem(`lock_dept-pendency_${currentDateStr}`);
+
+            const misPenTbody = document.getElementById('mis-pendency-tbody');
+            if(misPenTbody) {
+                const misPenRows = misPenTbody.querySelectorAll('tr');
+                pendencyDepts.forEach((deptName, i) => {
+                    try {
+                        const tr = misPenRows[i];
+                        if(!tr) return;
+
+                        const v3 = penData[`b3_${i}`] || '';
+                        const v5 = penData[`b5_${i}`] || '';
+                        const tdV3 = document.getElementById(`mis-pen-b3-${i}`);
+                        const tdV5 = document.getElementById(`mis-pen-b5-${i}`);
+                        const tdTot = document.getElementById(`mis-pen-tot-${i}`);
+                        if(tdV3) tdV3.innerText = v3;
+                        if(tdV5) tdV5.innerText = v5;
+                        if(tdTot) tdTot.innerText = (parseInt(v3)||0) + (parseInt(v5)||0);
+
+                        let b3Auth = false; let b5Auth = false;
+                        if (isSuperAdmin) { 
+                            b3Auth = true; b5Auth = true; 
+                        } else {
+                            const subCat = getTargetSubCategory(deptName);
+                            b3Auth = hasPerm('mis-dept-pendency', 'Bldg3', subCat);
+                            b5Auth = hasPerm('mis-dept-pendency', 'Bldg5', subCat);
+                        }
+                        if(!b3Auth && !b5Auth) tr.style.display = 'none';
+                        else tr.style.display = '';
+                    } catch(e){}
+                });
+            }
+
+            const btnSavePen = document.getElementById('btn-save-pendency');
+            if(btnSavePen) btnSavePen.disabled = penLocked || !isUI('btn-save-pendency');
+            const alertPenSuc = document.getElementById('alert-pendency-success');
+            if(alertPenSuc) alertPenSuc.style.display = 'none';
+            const alertPenErr = document.getElementById('alert-pendency-error');
+            if(alertPenErr) alertPenErr.style.display = penLocked ? 'block' : 'none';
+
+            const userPenTbody = document.getElementById('user-pendency-tbody');
+            if(userPenTbody) {
+                const userPenRows = userPenTbody.querySelectorAll('tr');
+                pendencyDepts.forEach((deptName, i) => {
+                    try {
+                        const tr = userPenRows[i];
+                        if(!tr) return;
+                        
+                        let b3Auth = false; let b5Auth = false;
+                        if (isSuperAdmin) { 
+                            b3Auth = true; b5Auth = true; 
+                        } else {
+                            const subCat = getTargetSubCategory(deptName);
+                            b3Auth = hasPerm('user-dept-pendency', 'Bldg3', subCat);
+                            b5Auth = hasPerm('user-dept-pendency', 'Bldg5', subCat);
+                        }
+                        
+                        const inB3 = document.getElementById(`user-pen-b3-${i}`);
+                        const inB5 = document.getElementById(`user-pen-b5-${i}`);
+                        
+                        if(inB3) { inB3.value = penData[`b3_${i}`] || ''; inB3.readOnly = true; inB3.classList.add('locked-input'); }
+                        if(inB5) { inB5.value = penData[`b5_${i}`] || ''; inB5.readOnly = true; inB5.classList.add('locked-input'); }
+                        try { calcUserPendencyTotal(i); } catch(e){}
+
+                        if(!b3Auth && !b5Auth) {
+                            tr.style.display = 'none';
+                        } else {
+                            tr.style.display = ''; 
+                            if(!penLocked) {
+                                if(b3Auth && inB3) { inB3.readOnly = false; inB3.classList.remove('locked-input'); } 
+                                if(b5Auth && inB5) { inB5.readOnly = false; inB5.classList.remove('locked-input'); } 
+                            }
+                        }
+                    } catch(e){}
+                });
+            }
+
+            // ================= MANPOWER DASHBOARD =================
+            const mpData = JSON.parse(localStorage.getItem(`data_manpower_${currentDateStr}`)) || {};
+            const mpLocked = localStorage.getItem(`lock_manpower_${currentDateStr}`);
+
+            manpowerConfig.forEach((dept, dIdx) => {
+                let misB3Auth = false, misB5Auth = false;
+                if (isSuperAdmin) { 
+                    misB3Auth = true; misB5Auth = true; 
+                } else {
+                    try {
+                        misB3Auth = ensureArray(dept.authCat).some(cat => hasPerm('mis-manpower', 'Bldg3', cat));
+                        misB5Auth = ensureArray(dept.authCat).some(cat => hasPerm('mis-manpower', 'Bldg5', cat));
+                    } catch(e){}
+                }
+                const misCard = document.getElementById(`mis-mp-card-${dIdx}`);
+                if(misCard) {
+                    if(!misB3Auth && !misB5Auth) misCard.style.display = 'none';
+                    else misCard.style.display = 'block';
+                }
+
+                let usrB3Auth = false, usrB5Auth = false;
+                if (isSuperAdmin) { 
+                    usrB3Auth = true; usrB5Auth = true; 
+                } else {
+                    try {
+                        usrB3Auth = ensureArray(dept.authCat).some(cat => hasPerm('user-manpower', 'Bldg3', cat));
+                        usrB5Auth = ensureArray(dept.authCat).some(cat => hasPerm('user-manpower', 'Bldg5', cat));
+                    } catch(e){}
+                }
+                const userCard = document.getElementById(`user-mp-card-${dIdx}`);
+                if(userCard) {
+                    if(!usrB3Auth && !usrB5Auth) userCard.style.display = 'none';
+                    else userCard.style.display = 'block';
+                }
+
+                let sumMisB3 = 0, sumMisB5 = 0;
+
+                ensureArray(dept.tasks).forEach((task, tIdx) => {
+                    try {
+                        const v3 = mpData[`b3_${dIdx}_${tIdx}`] || '';
+                        const v5 = mpData[`b5_${dIdx}_${tIdx}`] || '';
+                        
+                        sumMisB3 += parseInt(v3) || 0;
+                        sumMisB5 += parseInt(v5) || 0;
+                        
+                        const tdMisB3 = document.getElementById(`mis-mp-b3-${dIdx}-${tIdx}`);
+                        const tdMisB5 = document.getElementById(`mis-mp-b5-${dIdx}-${tIdx}`);
+                        if(tdMisB3) tdMisB3.innerText = v3;
+                        if(tdMisB5) tdMisB5.innerText = v5;
+
+                        const inB3 = document.getElementById(`user-mp-b3-${dIdx}-${tIdx}`);
+                        const inB5 = document.getElementById(`user-mp-b5-${dIdx}-${tIdx}`);
+                        
+                        if(inB3) { inB3.value = v3; inB3.readOnly = true; inB3.classList.add('locked-input'); }
+                        if(inB5) { inB5.value = v5; inB5.readOnly = true; inB5.classList.add('locked-input'); }
+
+                        if(!mpLocked) {
+                            if(usrB3Auth && inB3) { inB3.readOnly = false; inB3.classList.remove('locked-input'); } 
+                            if(usrB5Auth && inB5) { inB5.readOnly = false; inB5.classList.remove('locked-input'); } 
+                        }
+                    } catch(e){}
+                });
+
+                const misB3Tot = document.getElementById(`mis-mp-tot-b3-${dIdx}`);
+                const misB5Tot = document.getElementById(`mis-mp-tot-b5-${dIdx}`);
+                if(misB3Tot) misB3Tot.innerText = sumMisB3;
+                if(misB5Tot) misB5Tot.innerText = sumMisB5;
+                
+                try { calcManpowerTotal(dIdx); } catch(e){}
+            });
+
+            const alertMpSuc = document.getElementById('alert-manpower-success');
+            if(alertMpSuc) alertMpSuc.style.display = 'none';
+            const alertMpErr = document.getElementById('alert-manpower-error');
+            if(alertMpErr) alertMpErr.style.display = mpLocked ? 'block' : 'none';
+            const btnSaveMp = document.getElementById('btn-save-manpower');
+            if(btnSaveMp) btnSaveMp.disabled = mpLocked || !isUI('btn-save-manpower');
+            
+            updateTargetManpower();
+        }
+
+        // ================= SAVE DATA ENTRY =================
+        function saveUserTarget(e) {
+            e.preventDefault();
+            const aDateEl = document.getElementById('achieve-date');
+            const tDateEl = document.getElementById('target-date');
+            const aDate = aDateEl ? aDateEl.value : null;
+            const tDate = tDateEl ? tDateEl.value : null;
+            
+            if (!aDate && !tDate) { alert("Please select a date to start entry."); return; }
+            
+            let savedSomething = false;
+
+            if (aDate) {
+                let aData = JSON.parse(localStorage.getItem(`data_target-board_${aDate}`)) || {};
+                let hasAData = false;
+                targetDepts.forEach((dept, i) => {
+                    const input = document.getElementById(`achieve-${i}`);
+                    if (input && !input.readOnly && !input.disabled && input.closest('tr').style.display !== 'none') {
+                        if (!aData[i]) aData[i] = { target: '', achieve: '' };
+                        aData[i].achieve = input.value;
+                        if(input.value.trim() !== '') hasAData = true;
+                    }
+                });
+                if(hasAData) {
+                    saveToDB(`data_target-board_${aDate}`, JSON.stringify(aData));
+                    saveToDB(`lock_target-board_${aDate}`, "1");
+                    savedSomething = true;
+                }
+            }
+            
+            if (tDate) {
+                let tData = JSON.parse(localStorage.getItem(`data_target-board_${tDate}`)) || {};
+                let hasTData = false;
+                targetDepts.forEach((dept, i) => {
+                    const input = document.getElementById(`target-${i}`);
+                    if (input && !input.readOnly && !input.disabled && input.closest('tr').style.display !== 'none') {
+                        if (!tData[i]) tData[i] = { target: '', achieve: '' };
+                        tData[i].target = input.value;
+                        if(input.value.trim() !== '') hasTData = true;
+                    }
+                });
+                if(hasTData) {
+                    saveToDB(`data_target-board_${tDate}`, JSON.stringify(tData));
+                    saveToDB(`lock_target-board_${tDate}`, "1");
+                    savedSomething = true;
+                }
+            }
+
+            if(savedSomething) {
+                const alertBox = document.getElementById('alert-target-success');
+                if(alertBox) {
+                    alertBox.style.display = 'block';
+                    setTimeout(() => { alertBox.style.display = 'none'; }, 2000);
+                }
+                checkFormLocks();
+            } else {
+                alert("You don't have authorization or cannot save empty data!");
+            }
+        }
+
+        function saveUserPendency(e) {
+            e.preventDefault();
+            let hasData = false;
+            let data = JSON.parse(localStorage.getItem(`data_dept-pendency_${currentDateStr}`)) || {};
+            
+            pendencyDepts.forEach((_, i) => {
+                const inB3 = document.getElementById(`user-pen-b3-${i}`);
+                const inB5 = document.getElementById(`user-pen-b5-${i}`);
+                if(inB3 && !inB3.readOnly && !inB3.disabled && inB3.closest('tr').style.display !== 'none') { 
+                    data[`b3_${i}`] = inB3.value; if(inB3.value.trim() !== '') hasData=true; 
+                }
+                if(inB5 && !inB5.readOnly && !inB5.disabled && inB5.closest('tr').style.display !== 'none') { 
+                    data[`b5_${i}`] = inB5.value; if(inB5.value.trim() !== '') hasData=true; 
+                }
+            });
+            if(!hasData) { alert("You don't have authorization or cannot save empty data!"); return; }
+
+            saveToDB(`data_dept-pendency_${currentDateStr}`, JSON.stringify(data));
+            saveToDB(`lock_dept-pendency_${currentDateStr}`, "1");
+            const alertBox = document.getElementById('alert-pendency-success');
+            if(alertBox) {
+                alertBox.style.display = 'block';
+                setTimeout(() => { alertBox.style.display = 'none'; }, 2000);
+            }
+            checkFormLocks();
+        }
+
+        function saveUserManpower(e) {
+            e.preventDefault();
+            let hasData = false;
+            let data = JSON.parse(localStorage.getItem(`data_manpower_${currentDateStr}`)) || {};
+
+            manpowerConfig.forEach((dept, dIdx) => {
+                ensureArray(dept.tasks).forEach((task, tIdx) => {
+                    const inB3 = document.getElementById(`user-mp-b3-${dIdx}-${tIdx}`);
+                    const inB5 = document.getElementById(`user-mp-b5-${dIdx}-${tIdx}`);
+                    const card = document.getElementById(`user-mp-card-${dIdx}`);
+                    
+                    if(card && card.style.display !== 'none') {
+                        if(inB3 && !inB3.readOnly && !inB3.disabled) { data[`b3_${dIdx}_${tIdx}`] = inB3.value; if(inB3.value.trim() !== '') hasData=true; }
+                        if(inB5 && !inB5.readOnly && !inB5.disabled) { data[`b5_${dIdx}_${tIdx}`] = inB5.value; if(inB5.value.trim() !== '') hasData=true; }
+                    }
+                });
+            });
+
+            if(!hasData) { alert("You don't have authorization or cannot save empty data!"); return; }
+            
+            saveToDB(`data_manpower_${currentDateStr}`, JSON.stringify(data));
+            saveToDB(`lock_manpower_${currentDateStr}`, "1");
+            const alertBox = document.getElementById('alert-manpower-success');
+            if(alertBox) {
+                alertBox.style.display = 'block';
+                setTimeout(() => { alertBox.style.display = 'none'; }, 2000);
+            }
+            checkFormLocks();
+        }
+
+        function calcUserPendencyTotal(i) {
+            const elTot = document.getElementById(`user-pen-tot-${i}`);
+            const elB3 = document.getElementById(`user-pen-b3-${i}`);
+            const elB5 = document.getElementById(`user-pen-b5-${i}`);
+            if(elTot && elB3 && elB5) {
+                elTot.innerText = (parseInt(elB3.value)||0) + (parseInt(elB5.value)||0);
+            }
+        }
+    </script>
+</body>
+</html>
