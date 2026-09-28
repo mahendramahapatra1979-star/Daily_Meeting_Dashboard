@@ -2389,6 +2389,13 @@
         function adminActivateModule(dataKey, dateVal) {
             if(confirm("This will unlock the module so data can be re-entered or re-uploaded. Continue?")) {
                 removeFromDB(`lock_${dataKey}_${dateVal}`);
+                
+                // Extra check for target-board split locks
+                if (dataKey === 'target-board') {
+                    removeFromDB(`lock_${dataKey}_${dateVal}_achieve`);
+                    removeFromDB(`lock_${dataKey}_${dateVal}_target`);
+                }
+                
                 loadAdminModulesList();
                 try { checkFormLocks(); } catch(e) {}
             }
@@ -2398,6 +2405,12 @@
             if(confirm(`Are you sure you want to permanently delete all data and locks for ${dataKey} on ${dateVal}?`)) {
                 removeFromDB(`data_${dataKey}_${dateVal}`);
                 removeFromDB(`lock_${dataKey}_${dateVal}`);
+                
+                if (dataKey === 'target-board') {
+                    removeFromDB(`lock_${dataKey}_${dateVal}_achieve`);
+                    removeFromDB(`lock_${dataKey}_${dateVal}_target`);
+                }
+
                 try { handleDateChange(); } catch(e) {}
                 loadAdminModulesList();
                 alert("Data deleted successfully.");
@@ -2410,6 +2423,11 @@
                 const dateStr = adminEditingKey.split('_').pop();
                 const lockKey = `lock_${adminEditingModule}_${dateStr}`;
                 removeFromDB(lockKey);
+                
+                if (adminEditingModule === 'target-board') {
+                    removeFromDB(`lock_${adminEditingModule}_${dateStr}_achieve`);
+                    removeFromDB(`lock_${adminEditingModule}_${dateStr}_target`);
+                }
                 
                 closeAdminEditor();
                 try { handleDateChange(); } catch(e) {}
@@ -2756,13 +2774,6 @@
                             const subCat = getTargetSubCategory(deptName);
                             b3Auth = hasPerm('target-board', 'Bldg3', subCat);
                             b5Auth = hasPerm('target-board', 'Bldg5', subCat);
-                            
-                            // FALLBACK: Auto-show custom departments if user has ANY module permission
-                            if (subCat === "OTHER" && !b3Auth && !b5Auth) {
-                                if (userPermissions['target-board'] && (ensureArray(userPermissions['target-board']['Bldg3']).length > 0 || ensureArray(userPermissions['target-board']['Bldg5']).length > 0)) {
-                                    b3Auth = true; b5Auth = true;
-                                }
-                            }
                         }
                         if (deptName.includes("3") || deptName.includes("03")) b5Auth = false;
                         if (deptName.includes("5") || deptName.includes("05")) b3Auth = false;
@@ -2814,13 +2825,6 @@
                             const subCat = getTargetSubCategory(deptName);
                             b3Auth = hasPerm('user-data-entry', 'Bldg3', subCat);
                             b5Auth = hasPerm('user-data-entry', 'Bldg5', subCat);
-                            
-                            // FALLBACK: Auto-show custom departments if user has ANY module permission
-                            if (subCat === "OTHER" && !b3Auth && !b5Auth) {
-                                if (userPermissions['user-data-entry'] && (ensureArray(userPermissions['user-data-entry']['Bldg3']).length > 0 || ensureArray(userPermissions['user-data-entry']['Bldg5']).length > 0)) {
-                                    b3Auth = true; b5Auth = true;
-                                }
-                            }
                         }
                         if (deptName.includes("3") || deptName.includes("03")) b5Auth = false;
                         if (deptName.includes("5") || deptName.includes("05")) b3Auth = false;
@@ -2876,13 +2880,6 @@
                             const subCat = getTargetSubCategory(deptName);
                             b3Auth = hasPerm('mis-dept-pendency', 'Bldg3', subCat);
                             b5Auth = hasPerm('mis-dept-pendency', 'Bldg5', subCat);
-                            
-                            // FALLBACK: Auto-show custom departments if user has ANY module permission
-                            if (subCat === "OTHER" && !b3Auth && !b5Auth) {
-                                if (userPermissions['mis-dept-pendency'] && (ensureArray(userPermissions['mis-dept-pendency']['Bldg3']).length > 0 || ensureArray(userPermissions['mis-dept-pendency']['Bldg5']).length > 0)) {
-                                    b3Auth = true; b5Auth = true;
-                                }
-                            }
                         }
                         if(!b3Auth && !b5Auth) tr.style.display = 'none';
                         else tr.style.display = '';
@@ -2912,13 +2909,6 @@
                             const subCat = getTargetSubCategory(deptName);
                             b3Auth = hasPerm('user-dept-pendency', 'Bldg3', subCat);
                             b5Auth = hasPerm('user-dept-pendency', 'Bldg5', subCat);
-                            
-                            // FALLBACK: Auto-show custom departments if user has ANY module permission
-                            if (subCat === "OTHER" && !b3Auth && !b5Auth) {
-                                if (userPermissions['user-dept-pendency'] && (ensureArray(userPermissions['user-dept-pendency']['Bldg3']).length > 0 || ensureArray(userPermissions['user-dept-pendency']['Bldg5']).length > 0)) {
-                                    b3Auth = true; b5Auth = true;
-                                }
-                            }
                         }
                         
                         const inB3 = document.getElementById(`user-pen-b3-${i}`);
