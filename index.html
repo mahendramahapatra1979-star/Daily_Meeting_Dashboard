@@ -42,13 +42,21 @@
         .thick-border-table th, .thick-border-table td { border: 1px solid #000; }
         .thick-border-table thead tr:last-child th { border-bottom: 3px solid #000; }
         
+        /* Sticky Header CSS for Data Entry Tables */
+        .sticky-table-wrapper { max-height: 60vh; overflow-y: auto; position: relative; border: 3px solid #000; }
+        .sticky-table-wrapper table { margin-top: 0; border: none; }
+        .sticky-table-wrapper th { position: sticky; top: 0; z-index: 5; box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4); }
+        .sticky-table-wrapper thead tr:nth-child(1) th { top: 0; }
+        .sticky-table-wrapper thead tr:nth-child(2) th { top: 41px; } /* Adjust based on exact row height if needed */
+        .sticky-table-wrapper thead tr:nth-child(3) th { top: 82px; border-bottom: 3px solid #000; }
+
         .bg-gray-header { background-color: #d1d5db !important; }
         .bg-blue-header { background-color: #bfdbfe !important; }
         .input-cell { background-color: #fef08a !important; padding: 0 !important; }
         
         .grid-input { width: 100%; height: 100%; min-height: 25px; border: none; background: transparent; text-align: center; font-size: 13px; font-family: inherit; outline: none; }
         .grid-input:focus { background-color: #fff; box-shadow: inset 0 0 0 2px #2563eb; }
-        .locked-input { background-color: #e5e7eb !important; color: #9ca3af; cursor: not-allowed; }
+        .locked-input { background-color: #e5e7eb !important; color: #9ca3af; cursor: not-allowed; pointer-events: none; }
         
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -92,7 +100,10 @@
             .print-block-stack { display: block !important; width: 100% !important; }
             .section-container { box-shadow: none !important; margin-bottom: 20px !important; border: none !important; padding: 0 !important; page-break-inside: avoid; width: 100% !important; }
             
-            table { width: 100% !important; max-width: 100% !important; table-layout: fixed; border-collapse: collapse !important; }
+            .sticky-table-wrapper { max-height: none; overflow: visible; border: none; }
+            .sticky-table-wrapper th { position: static; box-shadow: none; }
+            
+            table { width: 100% !important; max-width: 100% !important; table-layout: fixed; border-collapse: collapse !important; border: 3px solid #000 !important; }
             tr { page-break-inside: avoid; page-break-after: auto; }
             th, td { padding: 4px !important; font-size: 10pt !important; border: 1px solid #000 !important; word-wrap: break-word; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -591,12 +602,15 @@
                 <!-- DATA ENTRY PAGE (USER ENTRY) -->
                 <div id="user-data-entry" class="section-container module-section" style="display:none;">
                     <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">Data Entry Page (Daily Target)</h3>
-                    <form id="form-user-target" onsubmit="saveUserTarget(event)">
+                    
+                    <div class="sticky-table-wrapper bg-white">
                         <table class="thick-border-table" id="data-entry-table">
-                            <thead>
-                                <tr><th colspan="3" class="bg-gray-header" style="font-size: 18px; padding: 12px;">DAILY TARGET DASHBOARD</th></tr>
+                            <thead class="bg-white">
                                 <tr>
-                                    <th rowspan="2" style="width: 30%;">DEPARTMENT</th>
+                                    <th colspan="3" class="bg-gray-header" style="font-size: 18px; padding: 12px;">DAILY TARGET DASHBOARD</th>
+                                </tr>
+                                <tr>
+                                    <th rowspan="2" style="width: 30%; z-index: 10; background-color: #f9fafb;">DEPARTMENT</th>
                                     <th class="bg-blue-100" style="width: 35%;">
                                         <label class="text-xs text-gray-700 block mb-1">Select Date for Achieve</label>
                                         <input type="date" id="achieve-date" class="border border-gray-400 p-1 rounded text-sm w-full outline-none focus:border-blue-500" onchange="checkFormLocks()">
@@ -615,9 +629,18 @@
                                 <!-- Populated dynamically via JS -->
                             </tbody>
                         </table>
-                        <button type="submit" id="btn-save-target" class="btn-save shadow-md mt-4">Save Data Entry</button>
-                        <div id="alert-target-success" class="alert-success">Data saved successfully!</div>
-                    </form>
+                    </div>
+                    
+                    <div class="flex gap-4 mt-4 bg-white p-4 border rounded shadow-sm">
+                        <div class="w-1/2 flex flex-col items-center">
+                            <button type="button" id="btn-save-achieve" onclick="saveUserTarget('achieve')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded transition w-full disabled:bg-gray-400 disabled:cursor-not-allowed">Save Achieve Data</button>
+                            <div id="alert-achieve-success" class="alert-success text-center">Achieve Data saved!</div>
+                        </div>
+                        <div class="w-1/2 flex flex-col items-center border-l-2 border-gray-300 pl-4">
+                            <button type="button" id="btn-save-target" onclick="saveUserTarget('target')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded transition w-full disabled:bg-gray-400 disabled:cursor-not-allowed">Save Target Data</button>
+                            <div id="alert-target-success" class="alert-success text-center">Target Data saved!</div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- DEPT PENDENCY USER ENTRY -->
@@ -2767,8 +2790,8 @@
             const aData = aDate ? JSON.parse(localStorage.getItem(`data_target-board_${aDate}`)) || {} : {};
             const tData = tDate ? JSON.parse(localStorage.getItem(`data_target-board_${tDate}`)) || {} : {};
 
-            const aLocked = aDate ? localStorage.getItem(`lock_target-board_${aDate}`) : false;
-            const tLocked = tDate ? localStorage.getItem(`lock_target-board_${tDate}`) : false;
+            const aLocked = aDate ? localStorage.getItem(`lock_target-board_${aDate}_achieve`) : false;
+            const tLocked = tDate ? localStorage.getItem(`lock_target-board_${tDate}_target`) : false;
 
             const userTbody = document.getElementById('user-target-tbody');
             if(userTbody) {
@@ -2819,8 +2842,11 @@
                 });
             }
 
-            const btnSaveTarget = document.getElementById('btn-save-target');
-            if (btnSaveTarget) btnSaveTarget.disabled = !isUI('btn-save-target');
+            const btnSaveAchieve = document.getElementById('btn-save-achieve');
+            if (btnSaveAchieve) btnSaveAchieve.disabled = aLocked || !aDate || !isUI('btn-save-target');
+            
+            const btnSaveTargetBtn = document.getElementById('btn-save-target');
+            if (btnSaveTargetBtn) btnSaveTargetBtn.disabled = tLocked || !tDate || !isUI('btn-save-target');
 
             // ================= DEPT PENDENCY =================
             const penData = JSON.parse(localStorage.getItem(`data_dept-pendency_${currentDateStr}`)) || {};
@@ -2997,55 +3023,32 @@
         }
 
         // ================= SAVE DATA ENTRY =================
-        function saveUserTarget(e) {
-            e.preventDefault();
-            const aDateEl = document.getElementById('achieve-date');
-            const tDateEl = document.getElementById('target-date');
-            const aDate = aDateEl ? aDateEl.value : null;
-            const tDate = tDateEl ? tDateEl.value : null;
+        function saveUserTarget(type) {
+            const dateEl = document.getElementById(`${type}-date`);
+            const dateStr = dateEl ? dateEl.value : null;
             
-            if (!aDate && !tDate) { alert("Please select a date to start entry."); return; }
-            
-            let savedSomething = false;
-
-            if (aDate) {
-                let aData = JSON.parse(localStorage.getItem(`data_target-board_${aDate}`)) || {};
-                let hasAData = false;
-                targetDepts.forEach((dept, i) => {
-                    const input = document.getElementById(`achieve-${i}`);
-                    if (input && !input.readOnly && !input.disabled && input.closest('tr').style.display !== 'none') {
-                        if (!aData[i]) aData[i] = { target: '', achieve: '' };
-                        aData[i].achieve = input.value;
-                        if(input.value.trim() !== '') hasAData = true;
-                    }
-                });
-                if(hasAData) {
-                    saveToDB(`data_target-board_${aDate}`, JSON.stringify(aData));
-                    saveToDB(`lock_target-board_${aDate}`, "1");
-                    savedSomething = true;
-                }
+            if (!dateStr) { 
+                alert(`Please select a date for ${type === 'achieve' ? 'Achieve' : 'Target'} to save.`); 
+                return; 
             }
             
-            if (tDate) {
-                let tData = JSON.parse(localStorage.getItem(`data_target-board_${tDate}`)) || {};
-                let hasTData = false;
-                targetDepts.forEach((dept, i) => {
-                    const input = document.getElementById(`target-${i}`);
-                    if (input && !input.readOnly && !input.disabled && input.closest('tr').style.display !== 'none') {
-                        if (!tData[i]) tData[i] = { target: '', achieve: '' };
-                        tData[i].target = input.value;
-                        if(input.value.trim() !== '') hasTData = true;
-                    }
-                });
-                if(hasTData) {
-                    saveToDB(`data_target-board_${tDate}`, JSON.stringify(tData));
-                    saveToDB(`lock_target-board_${tDate}`, "1");
-                    savedSomething = true;
-                }
-            }
+            let data = JSON.parse(localStorage.getItem(`data_target-board_${dateStr}`)) || {};
+            let hasData = false;
 
-            if(savedSomething) {
-                const alertBox = document.getElementById('alert-target-success');
+            targetDepts.forEach((dept, i) => {
+                const input = document.getElementById(`${type}-${i}`);
+                if (input && !input.readOnly && !input.disabled && input.closest('tr').style.display !== 'none') {
+                    if (!data[i]) data[i] = { target: '', achieve: '' };
+                    data[i][type] = input.value;
+                    if(input.value.trim() !== '') hasData = true;
+                }
+            });
+
+            if(hasData) {
+                saveToDB(`data_target-board_${dateStr}`, JSON.stringify(data));
+                saveToDB(`lock_target-board_${dateStr}_${type}`, "1");
+                
+                const alertBox = document.getElementById(`alert-${type}-success`);
                 if(alertBox) {
                     alertBox.style.display = 'block';
                     setTimeout(() => { alertBox.style.display = 'none'; }, 2000);
