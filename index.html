@@ -10,7 +10,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 
-    <!-- EmailJS SDK (Kept for compatibility, but email now drafts manually via mailto) -->
+    <!-- EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script type="text/javascript">
         // YAHAN APNI PUBLIC KEY DALEIN (EmailJS > Account > Public Key)
@@ -45,7 +45,7 @@
         /* Sticky Header CSS for Data Entry Tables */
         .sticky-table-wrapper { max-height: 60vh; overflow-y: auto; position: relative; border: 3px solid #000; }
         .sticky-table-wrapper table { margin-top: 0; border: none; }
-        .sticky-table-wrapper th { position: sticky; top: 0; z-index: 5; box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4); }
+        .sticky-table-wrapper th { position: sticky; top: 0; z-index: 5; box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4); background-color: #f9fafb; }
         .sticky-table-wrapper thead tr:nth-child(1) th { top: 0; }
         .sticky-table-wrapper thead tr:nth-child(2) th { top: 41px; } 
         .sticky-table-wrapper thead tr:nth-child(3) th { top: 82px; border-bottom: 3px solid #000; }
@@ -353,10 +353,60 @@
             </div>
 
             <div id="admin-data" class="admin-section">
-                <h3 class="text-lg font-bold mb-4 text-gray-800">Data Management (Edit & Delete)</h3>
+                <h3 class="text-lg font-bold mb-4 text-gray-800">Data Management & CSV Rules</h3>
+                
+                <!-- Advanced CSV Rules Section -->
+                <div class="bg-white p-4 border border-blue-200 shadow-sm rounded mb-8">
+                    <h4 class="font-bold text-blue-800 mb-2 border-b pb-2">CSV Upload Exclusion Rules</h4>
+                    <p class="text-xs text-gray-600 mb-4">Select the statuses that should NOT be counted if their date falls within the selected Day Range from the Global Date.</p>
+                    
+                    <div class="flex flex-col gap-4">
+                        <div class="flex flex-wrap items-center gap-6 bg-gray-50 p-3 rounded border">
+                            <label class="font-bold text-sm text-gray-700"><input type="checkbox" id="rule-b3-check" class="mr-2"> Bldg#3</label>
+                            <label class="font-bold text-sm text-gray-700"><input type="checkbox" id="rule-b5-check" class="mr-2"> Bldg#5</label>
+                            
+                            <div class="flex items-center gap-2 border-l border-gray-300 pl-6">
+                                <label class="text-sm font-bold text-gray-700">Day Range:</label>
+                                <input type="number" id="rule-day-range" class="border p-1 w-20 text-center rounded outline-none focus:border-blue-500" value="10">
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-center text-sm border bg-white">
+                                <thead class="bg-gray-200">
+                                    <tr>
+                                        <th class="p-2 border">GRN</th>
+                                        <th class="p-2 border">LOST</th>
+                                        <th class="p-2 border">OFFLINE</th>
+                                        <th class="p-2 border">RECYCLE</th>
+                                        <th class="p-2 border">PACKED</th>
+                                        <th class="p-2 border">PICKED</th>
+                                        <th class="p-2 border">NEW</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="p-2 border"><input type="checkbox" class="rule-status-chk w-4 h-4 cursor-pointer" value="GRN"></td>
+                                        <td class="p-2 border"><input type="checkbox" class="rule-status-chk w-4 h-4 cursor-pointer" value="LOST"></td>
+                                        <td class="p-2 border"><input type="checkbox" class="rule-status-chk w-4 h-4 cursor-pointer" value="OFFLINE"></td>
+                                        <td class="p-2 border"><input type="checkbox" class="rule-status-chk w-4 h-4 cursor-pointer" value="RECYCLE"></td>
+                                        <td class="p-2 border"><input type="checkbox" class="rule-status-chk w-4 h-4 cursor-pointer" value="PACKED"></td>
+                                        <td class="p-2 border"><input type="checkbox" class="rule-status-chk w-4 h-4 cursor-pointer" value="PICKED"></td>
+                                        <td class="p-2 border"><input type="checkbox" class="rule-status-chk w-4 h-4 cursor-pointer" value="NEW"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <button type="button" onclick="saveUploadRules()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow transition">Save Exclusion Rules</button>
+                            <span id="rule-save-msg" class="ml-4 text-green-600 font-bold hidden">Rules Saved!</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex gap-4 items-end bg-gray-50 p-4 border rounded mb-6">
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">Select Date</label>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">Select Date for Data Edit/Delete</label>
                         <input type="date" id="admin-data-date" class="border p-2 rounded text-sm outline-none focus:border-blue-500" onchange="loadAdminModulesList()">
                     </div>
                 </div>
@@ -396,7 +446,7 @@
             <!-- NEW UI CONTROL ADMIN TAB -->
             <div id="admin-ui-control" class="admin-section">
                 <h3 class="text-lg font-bold mb-4 text-gray-800">Global UI Controls (Enable/Disable Elements)</h3>
-                <p class="text-xs text-gray-600 mb-4">Uncheck a box to disable the corresponding button/link across the application.</p>
+                <p class="text-xs text-gray-600 mb-4">Uncheck a box to disable the corresponding section, button, or input across the application.</p>
                 <div id="ui-controls-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"></div>
                 <div class="mt-4 border-t pt-4">
                     <button onclick="saveUIControls()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded shadow transition">Save UI Layout Configuration</button>
@@ -551,6 +601,12 @@
                             <!-- Populated dynamically via JS -->
                         </tbody>
                     </table>
+                    
+                    <!-- NEW MIS SAVE BUTTON -->
+                    <div class="mt-4 flex justify-end">
+                        <button type="button" id="btn-save-mis-target" onclick="saveMISTarget()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow transition disabled:bg-gray-400 disabled:cursor-not-allowed">Save Today Target (MIS)</button>
+                        <span id="alert-mis-target-success" class="alert-success ml-4 flex items-center">Saved!</span>
+                    </div>
                 </div>
 
                 <!-- NEW WRAPPER FOR SIDE-BY-SIDE LAYOUT -->
@@ -633,18 +689,18 @@
                                 </tr>
                                 <tr>
                                     <th rowspan="2" style="width: 30%; z-index: 10; background-color: #f9fafb;">DEPARTMENT</th>
-                                    <th class="bg-blue-100" style="width: 35%;">
+                                    <th class="bg-blue-100" style="width: 35%;" id="col-head-achieve">
                                         <label class="text-xs text-gray-700 block mb-1">Select Date for Achieve</label>
                                         <input type="date" id="achieve-date" class="border border-gray-400 p-1 rounded text-sm w-full outline-none focus:border-blue-500" onchange="checkFormLocks()">
                                     </th>
-                                    <th class="bg-green-100" style="width: 35%; border-left: 2px solid #9ca3af;">
+                                    <th class="bg-green-100" style="width: 35%; border-left: 2px solid #9ca3af;" id="col-head-target">
                                         <label class="text-xs text-gray-700 block mb-1">Select Date for Target</label>
                                         <input type="date" id="target-date" class="border border-gray-400 p-1 rounded text-sm w-full outline-none focus:border-green-500" onchange="checkFormLocks()">
                                     </th>
                                 </tr>
                                 <tr>
-                                    <th class="bg-blue-50">ACHIEVE</th>
-                                    <th class="bg-green-50 border-left: 2px solid #9ca3af;">TODAY TARGET</th>
+                                    <th class="bg-blue-50" id="col-subhead-achieve">ACHIEVE</th>
+                                    <th class="bg-green-50 border-left: 2px solid #9ca3af;" id="col-subhead-target">TODAY TARGET</th>
                                 </tr>
                             </thead>
                             <tbody id="user-target-tbody">
@@ -769,6 +825,7 @@
         let draftTargetDepts = [];
         let draftPendencyDepts = [];
         let reportEmails = [];
+        let uploadExclusionConfig = { b3: false, b5: false, days: 10, statuses: [] };
         
         let lastTargetConfigStr = '';
         let lastPendencyConfigStr = '';
@@ -806,6 +863,9 @@
             { id: 'link-user-data-entry', label: 'Sidebar: Data Entry Page' },
             { id: 'link-user-dept-pendency', label: 'Sidebar: Dept Pendency Entry' },
             { id: 'link-user-manpower', label: 'Sidebar: Manpower Detail Entry' },
+            { id: 'sec-achieve', label: 'Data Entry: Achieve Section' },
+            { id: 'sec-today-target', label: 'Data Entry: Today Target Section' },
+            { id: 'mis-edit-target', label: 'MIS Dashboard: Edit Today Target' },
             { id: 'btn-upload-overall', label: 'Upload Button: Overall Putaway' },
             { id: 'btn-upload-putaway', label: 'Upload Button: Putaway Bldg Wise' },
             { id: 'btn-upload-po', label: 'Upload Button: Returns PO' },
@@ -867,7 +927,7 @@
 
             for (let i = 0; i < originalElements.length; i++) {
                 const tag = cloneElements[i].tagName;
-                if (['TH', 'TD', 'TABLE'].includes(tag)) {
+                if (['TH', 'TD', 'TABLE', 'INPUT'].includes(tag)) {
                     const computed = window.getComputedStyle(originalElements[i]);
                     const target = cloneElements[i];
                     
@@ -877,6 +937,18 @@
                             target.closest('tr').style.display = 'none';
                             continue;
                         }
+                    }
+
+                    if (tag === 'INPUT' && target.type === 'number') {
+                        const val = target.value;
+                        const td = document.createElement('td');
+                        td.innerText = val;
+                        td.style.border = '1px solid #000000';
+                        td.style.padding = '8px';
+                        td.style.textAlign = 'center';
+                        td.style.backgroundColor = computed.backgroundColor !== 'rgba(0, 0, 0, 0)' && computed.backgroundColor !== 'transparent' ? computed.backgroundColor : '#fff';
+                        target.parentNode.replaceChild(td, target);
+                        continue;
                     }
 
                     const bg = computed.backgroundColor;
@@ -923,7 +995,13 @@
                         let rowData = [];
                         const cells = row.querySelectorAll('th, td');
                         cells.forEach(cell => {
-                            let cellText = cell.innerText.replace(/\r?\n|\r/g, ' ').trim();
+                            let cellText = "";
+                            const input = cell.querySelector('input');
+                            if(input) {
+                                cellText = input.value.trim();
+                            } else {
+                                cellText = cell.innerText.replace(/\r?\n|\r/g, ' ').trim();
+                            }
                             rowData.push(cellText);
                         });
                         text += rowData.join("\t") + "\n";
@@ -987,13 +1065,15 @@
                 if (e.key === 'Enter' && target.tagName === 'BUTTON') return; 
                 e.preventDefault(); 
                 
-                if(target.id && (target.id.includes('achieve') || target.id.includes('target')) && target.type === 'number') {
+                if(target.id && (target.id.includes('achieve') || target.id.includes('target') || target.id.includes('mis-tgt-input')) && target.type === 'number') {
                     const type = target.id.includes('achieve') ? 'achieve' : 'target';
-                    const dateEl = document.getElementById(type + '-date');
-                    if (dateEl && !dateEl.value) {
-                        alert("Please select the date to start entry.");
-                        target.blur();
-                        return; 
+                    if (target.closest('#user-data-entry')) {
+                        const dateEl = document.getElementById(type + '-date');
+                        if (dateEl && !dateEl.value) {
+                            alert("Please select the date to start entry.");
+                            target.blur();
+                            return; 
+                        }
                     }
                 }
 
@@ -1003,7 +1083,7 @@
                 const currentIndex = focusables.indexOf(target);
                 if (currentIndex > -1) {
                     let nextInput = null;
-                    const colClass = Array.from(target.classList).find(c => c.startsWith('col-') || c.startsWith('admin-col-'));
+                    const colClass = Array.from(target.classList).find(c => c.startsWith('col-') || c.startsWith('admin-col-') || c.startsWith('mis-col-'));
 
                     if (e.key === 'Enter' || e.key === 'ArrowDown') {
                         if (colClass) {
@@ -1035,7 +1115,7 @@
             if (e.target.type === 'number') { e.preventDefault(); }
         }, { passive: false });
 
-        // ================= ADMIN UI CONTROLS ENGINE =================
+        // ================= ADMIN UI CONTROLS & RULES ENGINE =================
         function renderUIControls() {
             const container = document.getElementById('ui-controls-container');
             if(!container) return;
@@ -1064,6 +1144,42 @@
             try { checkFormLocks(); } catch(e){}
         }
 
+        function renderUploadRules() {
+            const b3Chk = document.getElementById('rule-b3-check');
+            const b5Chk = document.getElementById('rule-b5-check');
+            const drInput = document.getElementById('rule-day-range');
+            const statusChks = document.querySelectorAll('.rule-status-chk');
+
+            if(b3Chk) b3Chk.checked = uploadExclusionConfig.b3 || false;
+            if(b5Chk) b5Chk.checked = uploadExclusionConfig.b5 || false;
+            if(drInput) drInput.value = uploadExclusionConfig.days || 10;
+            
+            const savedStatuses = uploadExclusionConfig.statuses || [];
+            if(statusChks.length > 0) {
+                statusChks.forEach(chk => {
+                    chk.checked = savedStatuses.includes(chk.value);
+                });
+            }
+        }
+
+        function saveUploadRules() {
+            uploadExclusionConfig.b3 = document.getElementById('rule-b3-check').checked;
+            uploadExclusionConfig.b5 = document.getElementById('rule-b5-check').checked;
+            uploadExclusionConfig.days = parseInt(document.getElementById('rule-day-range').value) || 0;
+            
+            const statuses = [];
+            document.querySelectorAll('.rule-status-chk').forEach(chk => {
+                if(chk.checked) statuses.push(chk.value);
+            });
+            uploadExclusionConfig.statuses = statuses;
+
+            saveToDB('upload_exclusion_config', JSON.stringify(uploadExclusionConfig));
+            
+            document.getElementById('rule-save-msg').classList.remove('hidden');
+            document.getElementById('rule-save-msg').style.display = 'inline-flex';
+            setTimeout(() => { document.getElementById('rule-save-msg').classList.add('hidden'); document.getElementById('rule-save-msg').style.display = 'none'; }, 2000);
+        }
+
         // ================= DYNAMIC UI TABLE GENERATORS =================
         function buildTargetTables() {
             let misHtml = '';
@@ -1084,13 +1200,13 @@
                     ${mpCell}
                     <td id="mis-tgt-yt-${i}" class="bg-gray-50 text-gray-800 font-medium"></td>
                     <td id="mis-tgt-ya-${i}" class="bg-gray-50 text-gray-800 font-medium"></td>
-                    <td id="mis-tgt-tt-${i}" class="bg-blue-50 text-blue-800 font-bold"></td>
+                    <td class="bg-blue-50 input-cell p-0"><input type="number" id="mis-tgt-input-tt-${i}" class="grid-input mis-col-target font-bold text-blue-800"></td>
                 </tr>`;
                 
                 userHtml += `<tr>
                     <td style="text-align: left; font-weight: bold;">${dept}</td>
-                    <td class="input-cell border-r-2 border-gray-400"><input type="number" id="achieve-${i}" class="grid-input col-achieve"></td>
-                    <td class="input-cell"><input type="number" id="target-${i}" class="grid-input col-target"></td>
+                    <td class="input-cell border-r-2 border-gray-400 td-achieve"><input type="number" id="achieve-${i}" class="grid-input col-achieve"></td>
+                    <td class="input-cell td-target"><input type="number" id="target-${i}" class="grid-input col-target"></td>
                 </tr>`;
             });
 
@@ -1307,7 +1423,7 @@
                     const data = snapshot.val() || {};
                     
                     // --- SYNC DELETIONS FROM FIREBASE TO LOCALSTORAGE ---
-                    const syncPrefixes = ['wms_', 'admin_master_pass', 'ui_controls', 'target_depts', 'pendency_depts', 'manpower_config', 'auth_', 'data_', 'lock_'];
+                    const syncPrefixes = ['wms_', 'admin_master_pass', 'ui_controls', 'upload_exclusion', 'target_depts', 'pendency_depts', 'manpower_config', 'auth_', 'data_', 'lock_'];
                     const localKeys = Object.keys(localStorage);
                     
                     localKeys.forEach(k => {
@@ -1324,7 +1440,7 @@
                     }
                 } else {
                     // Database is completely empty, clear all syncable local keys
-                    const localKeys = Object.keys(localStorage).filter(k => k.startsWith('data_') || k.startsWith('lock_') || k.startsWith('target_') || k.startsWith('pendency_') || k.startsWith('manpower_') || k.startsWith('wms_') || k.startsWith('ui_') || k.startsWith('auth_') || k.startsWith('admin_'));
+                    const localKeys = Object.keys(localStorage).filter(k => k.startsWith('data_') || k.startsWith('lock_') || k.startsWith('target_') || k.startsWith('pendency_') || k.startsWith('manpower_') || k.startsWith('wms_') || k.startsWith('ui_') || k.startsWith('auth_') || k.startsWith('admin_') || k.startsWith('upload_exclusion'));
                     localKeys.forEach(k => {
                         if(k !== 'active_session' && k !== 'last_active_section') {
                             localStorage.removeItem(k);
@@ -1351,8 +1467,11 @@
                     populateLoginUsers();
                     
                     uiControlsState = JSON.parse(localStorage.getItem('ui_controls_config')) || {};
+                    uploadExclusionConfig = JSON.parse(localStorage.getItem('upload_exclusion_config')) || { b3: false, b5: false, days: 10, statuses: [] };
+
                     if(document.getElementById('admin-container').style.display !== 'none') {
                         renderUIControls();
+                        renderUploadRules();
                     }
 
                     // ENSURE DOM TABLES ARE REBUILT IF LIVE LAYOUT CONFIGURATION HAS CHANGED
@@ -1379,7 +1498,7 @@
                     }
                     
                     if (document.getElementById('app-container').style.display !== 'none') {
-                        try { checkFormLocks(false, true); } catch(e) {}
+                        try { handleDateChange(); checkFormLocks(true); } catch(e) {}
                     }
                 } else {
                     safeInit();
@@ -1417,6 +1536,7 @@
             reportEmails = ensureArray(JSON.parse(localStorage.getItem('wms_report_emails')));
             wmsUsers = ensureArray(JSON.parse(localStorage.getItem('wms_users')));
             uiControlsState = JSON.parse(localStorage.getItem('ui_controls_config')) || {};
+            uploadExclusionConfig = JSON.parse(localStorage.getItem('upload_exclusion_config')) || { b3: false, b5: false, days: 10, statuses: [] };
 
             // Initialize global state strings to track layout sync changes
             lastTargetConfigStr = JSON.stringify(targetDepts);
@@ -1451,6 +1571,7 @@
                     document.getElementById("welcome-banner").classList.remove('hidden');
                     
                     document.getElementById("login-container").style.display = "none";
+                    document.getElementById("app-container").classList.remove('hidden');
                     document.getElementById("app-container").style.display = "flex";
                     
                     startLiveClock();
@@ -1481,10 +1602,12 @@
                     userPermissions = {};
                     
                     document.getElementById("login-container").style.display = "none";
+                    document.getElementById("admin-container").classList.remove('hidden');
                     document.getElementById("admin-container").style.display = "flex";
                     renderAdminUsers();
                     loadAdminModulesList();
                     renderUIControls();
+                    renderUploadRules();
                 } else {
                     const userIndex = wmsUsers.findIndex(u => u.name === session.uid);
                     if (userIndex !== -1) {
@@ -1496,6 +1619,7 @@
                         document.getElementById("welcome-banner").classList.remove('hidden');
                         
                         document.getElementById("login-container").style.display = "none";
+                        document.getElementById("app-container").classList.remove('hidden');
                         document.getElementById("app-container").style.display = "flex";
                         
                         startLiveClock();
@@ -1531,6 +1655,7 @@
             renderAdminOverviewLinks();
             renderAdminEmails(); 
             renderUIControls();
+            renderUploadRules();
         }
 
         function startLiveClock() {
@@ -1575,6 +1700,36 @@
             return ret.map(v => v.trim());
         }
 
+        function parseDDMMYYYY(raw) {
+            if(!raw) return null;
+            let cleaned = raw.trim();
+            let datePart = cleaned.split(' ')[0];
+            
+            let dObj = null;
+            if(datePart.includes('-')) {
+                let parts = datePart.split('-');
+                if(parts[0].length === 4) { // YYYY-MM-DD
+                    dObj = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+                } else { // DD-MM-YYYY
+                    dObj = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+                }
+            } else if (datePart.includes('/')) {
+                let parts = datePart.split('/');
+                dObj = new Date(parseInt(parts[2]), parseInt(parts[0])-1, parseInt(parts[1]));
+            } else {
+                dObj = new Date(raw); 
+            }
+
+            if(dObj && !isNaN(dObj.getTime())) {
+                return {
+                    ts: dObj.getTime(), 
+                    dObj: dObj,
+                    str: String(dObj.getDate()).padStart(2, '0') + '-' + String(dObj.getMonth() + 1).padStart(2, '0') + '-' + dObj.getFullYear()
+                };
+            }
+            return { ts: 0, str: datePart, dObj: null }; 
+        }
+
         async function uploadCentralCSV(type, silent = false) {
             let fileInput, file, text;
             
@@ -1599,24 +1754,54 @@
                 if (rows.length > 0) {
                     const headers = rows[0].split(',').map(h => h.trim().replace(/['"]+/g, ''));
                     let statusColIndex = headers.findIndex(h => h.toLowerCase().includes('item status'));
+                    let bldgColIndex = headers.findIndex(h => h.toLowerCase().includes('fulfillment location name'));
+                    let dateColIndex = headers.findIndex(h => h.toLowerCase().includes('status updated at'));
                     
-                    if (statusColIndex === -1) {
-                        statusColIndex = 9; 
-                    }
+                    if (statusColIndex === -1) statusColIndex = 9; 
+                    if (bldgColIndex === -1) bldgColIndex = 15; 
+                    if (dateColIndex === -1) dateColIndex = 7; 
+
+                    const globalDateObj = new Date(currentDateStr);
+                    const minTs = new Date(globalDateObj.getFullYear(), globalDateObj.getMonth(), globalDateObj.getDate()).getTime();
+                    const maxTs = minTs + ((uploadExclusionConfig.days || 10) * 24 * 60 * 60 * 1000);
+                    const ignoredStatusesUpper = uploadExclusionConfig.statuses.map(s => s.toUpperCase());
 
                     for (let i = 1; i < rows.length; i++) {
-                        const cols = rows[i].split(',').map(c => c.trim().replace(/['"]+/g, '').toUpperCase());
+                        const cols = parseCSVLine(rows[i]);
                         
                         if (cols.length > statusColIndex) {
-                            const status = cols[statusColIndex];
+                            const status = cols[statusColIndex].toUpperCase();
+                            const bldgStr = cols.length > bldgColIndex ? cols[bldgColIndex].toUpperCase() : '';
+                            const rawDate = cols.length > dateColIndex ? cols[dateColIndex] : '';
                             
-                            if (status.includes('GRN')) data.grn++;
-                            if (status.includes('LOST')) data.lost++;
-                            if (status.includes('OFFLINE')) data.offline++;
-                            if (status.includes('RECYCLE')) data.recycle++;
-                            if (status.includes('PACKED')) data.packed++;
-                            if (status.includes('PICKED')) data.picked++;
-                            if (status.includes('NEW')) data.new++;
+                            // Exclusion Check Logic
+                            let shouldIgnore = false;
+                            if (ignoredStatusesUpper.includes(status)) {
+                                let bldgMatch = false;
+                                if ((bldgStr.includes('BLDG3') || bldgStr.includes('BLDG 3') || bldgStr === '3') && uploadExclusionConfig.b3) bldgMatch = true;
+                                if ((bldgStr.includes('BLDG5') || bldgStr.includes('BLDG 5') || bldgStr === '5') && uploadExclusionConfig.b5) bldgMatch = true;
+                                
+                                // If CSV doesn't differentiate building but we have rules, we might want to check if ANY rule applies.
+                                // But safely, if bldgStr is empty, we assume it matches if any box is ticked.
+                                if (!bldgStr && (uploadExclusionConfig.b3 || uploadExclusionConfig.b5)) bldgMatch = true;
+
+                                if (bldgMatch) {
+                                    const pDate = parseDDMMYYYY(rawDate);
+                                    if(pDate && pDate.ts >= minTs && pDate.ts <= maxTs) {
+                                        shouldIgnore = true;
+                                    }
+                                }
+                            }
+
+                            if (!shouldIgnore) {
+                                if (status.includes('GRN')) data.grn++;
+                                if (status.includes('LOST')) data.lost++;
+                                if (status.includes('OFFLINE')) data.offline++;
+                                if (status.includes('RECYCLE')) data.recycle++;
+                                if (status.includes('PACKED')) data.packed++;
+                                if (status.includes('PICKED')) data.picked++;
+                                if (status.includes('NEW')) data.new++;
+                            }
                         }
                     }
                 }
@@ -1650,53 +1835,40 @@
                     if (bldgColIndex === -1) bldgColIndex = 15; 
                     if (dateColIndex === -1) dateColIndex = 7; 
 
-                    function parseDDMMYYYY(raw) {
-                        if(!raw) return null;
-                        
-                        let cleaned = raw.trim();
-                        let datePart = cleaned.split(' ')[0];
-                        
-                        let dObj = null;
-                        if(datePart.includes('-')) {
-                            let parts = datePart.split('-');
-                            if(parts[0].length === 4) { // YYYY-MM-DD
-                                dObj = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
-                            } else { // DD-MM-YYYY
-                                dObj = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
-                            }
-                        } else if (datePart.includes('/')) {
-                            let parts = datePart.split('/');
-                            dObj = new Date(parseInt(parts[2]), parseInt(parts[0])-1, parseInt(parts[1]));
-                        } else {
-                            dObj = new Date(raw); 
-                        }
-
-                        if(dObj && !isNaN(dObj.getTime())) {
-                            return {
-                                ts: dObj.getTime(), 
-                                dObj: dObj,
-                                str: String(dObj.getDate()).padStart(2, '0') + '-' + String(dObj.getMonth() + 1).padStart(2, '0') + '-' + dObj.getFullYear()
-                            };
-                        }
-                        return { ts: 0, str: datePart, dObj: null }; 
-                    }
-
                     // Strict Month/Year isolation for Dashboard logic
                     const dashDateObj = new Date(currentDateStr);
                     const dashM = dashDateObj.getMonth();
                     const dashY = dashDateObj.getFullYear();
                     const mNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+                    const minTs = new Date(dashDateObj.getFullYear(), dashDateObj.getMonth(), dashDateObj.getDate()).getTime();
+                    const maxTs = minTs + ((uploadExclusionConfig.days || 10) * 24 * 60 * 60 * 1000);
+                    const ignoredStatusesUpper = uploadExclusionConfig.statuses.map(s => s.toUpperCase());
+
                     for (let i = 1; i < rows.length; i++) {
-                        const safeCols = rows[i].split(',').map(c => c.trim().replace(/['"]+/g, '').toUpperCase());
+                        const safeCols = parseCSVLine(rows[i]);
 
                         if (safeCols.length > Math.max(statusColIndex, bldgColIndex, dateColIndex)) {
-                            const status = safeCols[statusColIndex];
-                            const bldgStr = safeCols[bldgColIndex];
+                            const status = safeCols[statusColIndex].toUpperCase();
+                            const bldgStr = safeCols[bldgColIndex].toUpperCase();
                             const rawDate = safeCols[dateColIndex];
                             const parsedDateObj = parseDDMMYYYY(rawDate);
                             
                             if(!parsedDateObj) continue;
+
+                            // Exclusion Check Logic
+                            let shouldIgnore = false;
+                            if (ignoredStatusesUpper.includes(status)) {
+                                let bldgMatch = false;
+                                if ((bldgStr.includes('BLDG3') || bldgStr.includes('BLDG 3') || bldgStr === '3') && uploadExclusionConfig.b3) bldgMatch = true;
+                                if ((bldgStr.includes('BLDG5') || bldgStr.includes('BLDG 5') || bldgStr === '5') && uploadExclusionConfig.b5) bldgMatch = true;
+
+                                if (bldgMatch && parsedDateObj.ts >= minTs && parsedDateObj.ts <= maxTs) {
+                                    shouldIgnore = true;
+                                }
+                            }
+
+                            if (shouldIgnore) continue; // Skip counting entirely
                             
                             let displayDateKey = parsedDateObj.str;
                             let groupTs = parsedDateObj.ts;
@@ -2046,7 +2218,7 @@
             buildAuthGrid();
             loadUserAuthGrid();
             
-            try { if(currentDateStr) checkFormLocks(); } catch(e){}
+            try { if(currentDateStr) checkFormLocks(true); } catch(e){}
             renderDeptConfigUI(); 
         }
 
@@ -2096,7 +2268,7 @@
             buildManpowerTables(); 
             buildAuthGrid();
             loadUserAuthGrid();
-            try { if(currentDateStr) checkFormLocks(); } catch(e){}
+            try { if(currentDateStr) checkFormLocks(true); } catch(e){}
         }
 
         // ================= ADMIN MODAL, LOGIN & OTP SYSTEM =================
@@ -2187,10 +2359,12 @@
                 localStorage.setItem('active_session', JSON.stringify({ uid: 'ADMIN_OVERRIDE', isAdmin: true }));
                 closeAdminModal();
                 document.getElementById("login-container").style.display = "none";
+                document.getElementById("admin-container").classList.remove('hidden');
                 document.getElementById("admin-container").style.display = "flex";
                 renderAdminUsers();
                 loadAdminModulesList();
                 renderUIControls();
+                renderUploadRules();
                 buildAuthGrid();
             } else { alert("Incorrect Admin Password!"); }
         }
@@ -2231,6 +2405,7 @@
                 document.getElementById("welcome-banner").classList.remove('hidden');
                 
                 document.getElementById("login-container").style.display = "none";
+                document.getElementById("app-container").classList.remove('hidden');
                 document.getElementById("app-container").style.display = "flex";
                 
                 document.querySelectorAll('.module-section').forEach(sec => sec.style.display = 'none');
@@ -2275,6 +2450,8 @@
             } else if (tabId === 'admin-auth') {
                 buildAuthGrid();
                 loadUserAuthGrid();
+            } else if (tabId === 'admin-data') {
+                renderUploadRules();
             }
         }
 
@@ -2511,7 +2688,7 @@
                 }
                 
                 loadAdminModulesList();
-                try { checkFormLocks(); } catch(e) {}
+                try { checkFormLocks(true); } catch(e) {}
             }
         }
 
@@ -2741,7 +2918,7 @@
             const hdYest = document.getElementById('header-yesterday-date');
             if(hdYest) hdYest.innerText = `${String(yDate.getDate()).padStart(2,'0')}-${months[yDate.getMonth()]}`;
 
-            try { checkFormLocks(); } catch(e) { console.error("Lock error", e); }
+            try { checkFormLocks(true); } catch(e) { console.error("Lock error", e); }
             try { renderReturnsPOTable(); } catch(e) {}
             try { renderPutawayBldgWiseTable(); } catch(e) {}
             try { renderOverallPutaway(); } catch(e) {}
@@ -2788,7 +2965,35 @@
             if(uh) uh.style.display = hasUserLinks ? 'flex' : 'none';
         }
 
-        function checkFormLocks() {
+        function saveMISTarget() {
+            let data = JSON.parse(localStorage.getItem(`data_target-board_${currentDateStr}`)) || {};
+            let hasData = false;
+
+            targetDepts.forEach((dept, i) => {
+                const input = document.getElementById(`mis-tgt-input-tt-${i}`);
+                if (input && !input.readOnly && !input.disabled && input.closest('tr').style.display !== 'none') {
+                    if(input.value.trim() !== '') {
+                        if (!data[i]) data[i] = { target: '', achieve: '' };
+                        data[i].target = input.value;
+                        hasData = true;
+                    }
+                }
+            });
+
+            if(hasData) {
+                saveToDB(`data_target-board_${currentDateStr}`, JSON.stringify(data));
+                
+                const alertBox = document.getElementById(`alert-mis-target-success`);
+                if(alertBox) {
+                    alertBox.style.display = 'block';
+                    setTimeout(() => { alertBox.style.display = 'none'; }, 2000);
+                }
+            } else {
+                alert("Please enter target data before saving.");
+            }
+        }
+
+        function checkFormLocks(forceDateChange = false) {
             applySidebarAuth(); 
             const isSuperAdmin = isAdminMode || (loggedInUser && loggedInUser.name === "ADMIN_OVERRIDE");
             const isUI = (id) => uiControlsState[id] !== false; // Check global enable/disable state
@@ -2848,6 +3053,9 @@
             const misTgtDataToday = JSON.parse(localStorage.getItem(`data_target-board_${currentDateStr}`)) || {};
             const misTgtDataYest = JSON.parse(localStorage.getItem(`data_target-board_${yDateStr}`)) || {};
             
+            const btnSaveMISTgt = document.getElementById('btn-save-mis-target');
+            if(btnSaveMISTgt) btnSaveMISTgt.style.display = isUI('mis-edit-target') ? 'block' : 'none';
+
             const misTbody = document.getElementById('mis-target-tbody');
             if(misTbody) {
                 const misTargetRows = misTbody.querySelectorAll('tr');
@@ -2861,7 +3069,7 @@
 
                         const tdYestTarget = document.getElementById(`mis-tgt-yt-${i}`);
                         const tdYestAchieve = document.getElementById(`mis-tgt-ya-${i}`);
-                        const tdTodayTarget = document.getElementById(`mis-tgt-tt-${i}`);
+                        const inputTodayTarget = document.getElementById(`mis-tgt-input-tt-${i}`);
 
                         const ytVal = misTgtDataYest[i]?.target || '';
                         const yaVal = misTgtDataYest[i]?.achieve || '';
@@ -2869,7 +3077,18 @@
 
                         if(tdYestTarget) tdYestTarget.innerText = ytVal;
                         if(tdYestAchieve) tdYestAchieve.innerText = yaVal;
-                        if(tdTodayTarget) tdTodayTarget.innerText = ttVal;
+                        if(inputTodayTarget) {
+                            if(forceDateChange || Object.keys(misTgtDataToday).length === 0) {
+                                inputTodayTarget.value = ttVal;
+                            }
+                            if(!isUI('mis-edit-target')) {
+                                inputTodayTarget.readOnly = true;
+                                inputTodayTarget.classList.add('locked-input');
+                            } else {
+                                inputTodayTarget.readOnly = false;
+                                inputTodayTarget.classList.remove('locked-input');
+                            }
+                        }
 
                         totYt += parseInt(ytVal) || 0;
                         totYa += parseInt(yaVal) || 0;
@@ -2912,10 +3131,24 @@
             const aLocks = aDate ? JSON.parse(localStorage.getItem(`lock_target-board_${aDate}_achieve`)) || {} : {};
             const tLocks = tDate ? JSON.parse(localStorage.getItem(`lock_target-board_${tDate}_target`)) || {} : {};
 
-            const aDateChanged = (aDate !== lastLoadedADate);
-            const tDateChanged = (tDate !== lastLoadedTDate);
+            const aDateChanged = forceDateChange || (aDate !== lastLoadedADate);
+            const tDateChanged = forceDateChange || (tDate !== lastLoadedTDate);
             if (aDateChanged) lastLoadedADate = aDate;
             if (tDateChanged) lastLoadedTDate = tDate;
+
+            // UI Control for showing/hiding Achieve and Target columns
+            const showAchieve = isUI('sec-achieve');
+            const showTarget = isUI('sec-today-target');
+            
+            const headAchieve = document.getElementById('col-head-achieve');
+            const headTarget = document.getElementById('col-head-target');
+            const subheadAchieve = document.getElementById('col-subhead-achieve');
+            const subheadTarget = document.getElementById('col-subhead-target');
+            
+            if(headAchieve) headAchieve.style.display = showAchieve ? '' : 'none';
+            if(subheadAchieve) subheadAchieve.style.display = showAchieve ? '' : 'none';
+            if(headTarget) headTarget.style.display = showTarget ? '' : 'none';
+            if(subheadTarget) subheadTarget.style.display = showTarget ? '' : 'none';
 
             const userTbody = document.getElementById('user-target-tbody');
             if(userTbody) {
@@ -2925,6 +3158,11 @@
                         const tr = userTargetRows[i];
                         if(!tr) return;
                         
+                        const achTd = tr.querySelector('.td-achieve');
+                        const tgtTd = tr.querySelector('.td-target');
+                        if(achTd) achTd.style.display = showAchieve ? '' : 'none';
+                        if(tgtTd) tgtTd.style.display = showTarget ? '' : 'none';
+
                         const achInput = document.getElementById(`achieve-${i}`);
                         const tgtInput = document.getElementById(`target-${i}`);
 
@@ -2947,14 +3185,14 @@
                                 if(aDateChanged || aLocks[deptName] || !aDate || Object.keys(aData).length === 0) { 
                                     achInput.value = (aData[i] && aData[i].achieve) !== undefined ? aData[i].achieve : ''; 
                                 }
-                                if(aLocks[deptName] || !aDate) { achInput.readOnly = true; achInput.classList.add('locked-input'); }
+                                if(aLocks[deptName] || !aDate || !showAchieve) { achInput.readOnly = true; achInput.classList.add('locked-input'); }
                                 else { achInput.readOnly = false; achInput.classList.remove('locked-input'); }
                             }
                             if(tgtInput) {
                                 if(tDateChanged || tLocks[deptName] || !tDate || Object.keys(tData).length === 0) { 
                                     tgtInput.value = (tData[i] && tData[i].target) !== undefined ? tData[i].target : ''; 
                                 }
-                                if(tLocks[deptName] || !tDate) { tgtInput.readOnly = true; tgtInput.classList.add('locked-input'); }
+                                if(tLocks[deptName] || !tDate || !showTarget) { tgtInput.readOnly = true; tgtInput.classList.add('locked-input'); }
                                 else { tgtInput.readOnly = false; tgtInput.classList.remove('locked-input'); }
                             }
                         }
@@ -2963,13 +3201,19 @@
             }
 
             const btnSaveAchieve = document.getElementById('btn-save-achieve');
-            if (btnSaveAchieve) btnSaveAchieve.disabled = !aDate || !isUI('btn-save-target');
+            if (btnSaveAchieve) {
+                btnSaveAchieve.disabled = !aDate || !showAchieve;
+                btnSaveAchieve.parentNode.style.display = showAchieve ? 'flex' : 'none';
+            }
             
             const btnSaveTargetBtn = document.getElementById('btn-save-target');
-            if (btnSaveTargetBtn) btnSaveTargetBtn.disabled = !tDate || !isUI('btn-save-target');
+            if (btnSaveTargetBtn) {
+                btnSaveTargetBtn.disabled = !tDate || !showTarget;
+                btnSaveTargetBtn.parentNode.style.display = showTarget ? 'flex' : 'none';
+            }
 
             // ================= DEPT PENDENCY =================
-            const globalDateChanged = (currentDateStr !== lastLoadedGlobalDate);
+            const globalDateChanged = forceDateChange || (currentDateStr !== lastLoadedGlobalDate);
             if (globalDateChanged) lastLoadedGlobalDate = currentDateStr;
 
             const penData = JSON.parse(localStorage.getItem(`data_dept-pendency_${currentDateStr}`)) || {};
@@ -3207,6 +3451,7 @@
             pendencyDepts.forEach((dept, i) => {
                 const inB3 = document.getElementById(`user-pen-b3-${i}`);
                 const inB5 = document.getElementById(`user-pen-b5-${i}`);
+                let rowSaved = false;
 
                 if(inB3 && !inB3.readOnly && !inB3.disabled && inB3.closest('tr').style.display !== 'none') { 
                     if(inB3.value.trim() !== '') { 
