@@ -1333,17 +1333,20 @@
         function updateTargetManpower() {
             const mpData = JSON.parse(localStorage.getItem(`data_manpower_${currentDateStr}`)) || {};
             
-            function getMpVal(dIdx, tIdx, bldg) { return parseInt(mpData[`${bldg}_${dIdx}_${tIdx}`]) || 0; }
+            function getMpVal(deptName, taskName, dIdx, tIdx, bldg) { 
+                return parseInt(mpData[`${bldg}_${deptName}_${taskName}`]) || parseInt(mpData[`${bldg}_${dIdx}_${tIdx}`]) || 0; 
+            }
             function getDIdx(id) { return manpowerConfig.findIndex(d => d.id === id); }
             
             function calcDept(deptId, bldg = 'both', excludeTasks = []) {
                 const dIdx = getDIdx(deptId);
                 if (dIdx === -1) return 0;
                 let sum = 0;
+                const deptName = manpowerConfig[dIdx].name;
                 manpowerConfig[dIdx].tasks.forEach((task, tIdx) => {
                     if (excludeTasks.some(ex => task.toLowerCase().includes(ex.toLowerCase()))) return;
-                    if (bldg === 'b3' || bldg === 'both') sum += getMpVal(dIdx, tIdx, 'b3');
-                    if (bldg === 'b5' || bldg === 'both') sum += getMpVal(dIdx, tIdx, 'b5');
+                    if (bldg === 'b3' || bldg === 'both') sum += getMpVal(deptName, task, dIdx, tIdx, 'b3');
+                    if (bldg === 'b5' || bldg === 'both') sum += getMpVal(deptName, task, dIdx, tIdx, 'b5');
                 });
                 return sum;
             }
@@ -1353,8 +1356,8 @@
                 manpowerConfig.forEach((dept, dIdx) => {
                     dept.tasks.forEach((task, tIdx) => {
                         if (taskNames.some(tn => task.toLowerCase().includes(tn.toLowerCase()))) {
-                            if (bldg === 'b3' || bldg === 'both') sum += getMpVal(dIdx, tIdx, 'b3');
-                            if (bldg === 'b5' || bldg === 'both') sum += getMpVal(dIdx, tIdx, 'b5');
+                            if (bldg === 'b3' || bldg === 'both') sum += getMpVal(dept.name, task, dIdx, tIdx, 'b3');
+                            if (bldg === 'b5' || bldg === 'both') sum += getMpVal(dept.name, task, dIdx, tIdx, 'b5');
                         }
                     });
                 });
@@ -2755,8 +2758,8 @@
             if (dataKey === 'target-board') {
                 html += `<table class="w-full text-left text-sm border"><thead class="bg-gray-200"><tr><th class="p-2 border">Department</th><th class="p-2 border">Achieve</th><th class="p-2 border">Target</th></tr></thead><tbody>`;
                 targetDepts.forEach((dept, i) => {
-                    const aVal = (data[i] && data[i].achieve) !== undefined ? data[i].achieve : '';
-                    const tVal = (data[i] && data[i].target) !== undefined ? data[i].target : '';
+                    const aVal = data[dept]?.achieve ?? data[i]?.achieve ?? '';
+                    const tVal = data[dept]?.target ?? data[i]?.target ?? '';
                     html += `<tr><td class="p-2 border font-semibold">${dept}</td>
                              <td class="p-1 border"><input type="number" id="admin-tgt-a-${i}" value="${aVal}" class="w-full border p-1 rounded admin-col-achieve"></td>
                              <td class="p-1 border"><input type="number" id="admin-tgt-t-${i}" value="${tVal}" class="w-full border p-1 rounded admin-col-target"></td></tr>`;
@@ -2765,9 +2768,11 @@
             } else if (dataKey === 'dept-pendency') {
                 html += `<table class="w-full text-left text-sm border"><thead class="bg-gray-200"><tr><th class="p-2 border">Department</th><th class="p-2 border">Bldg#3</th><th class="p-2 border">Bldg#5</th></tr></thead><tbody>`;
                 pendencyDepts.forEach((dept, i) => {
+                    const v3 = data[`b3_${dept}`] ?? data[`b3_${i}`] ?? '';
+                    const v5 = data[`b5_${dept}`] ?? data[`b5_${i}`] ?? '';
                     html += `<tr><td class="p-2 border font-semibold">${dept}</td>
-                        <td class="p-1 border"><input type="number" id="admin-pen-b3-${i}" value="${data[`b3_${i}`]||''}" class="w-full border p-1 rounded admin-col-b3"></td>
-                        <td class="p-1 border"><input type="number" id="admin-pen-b5-${i}" value="${data[`b5_${i}`]||''}" class="w-full border p-1 rounded admin-col-b5"></td></tr>`;
+                        <td class="p-1 border"><input type="number" id="admin-pen-b3-${i}" value="${v3}" class="w-full border p-1 rounded admin-col-b3"></td>
+                        <td class="p-1 border"><input type="number" id="admin-pen-b5-${i}" value="${v5}" class="w-full border p-1 rounded admin-col-b5"></td></tr>`;
                 });
                 html += `</tbody></table>`;
             } else if (dataKey === 'manpower') {
@@ -2778,9 +2783,11 @@
                         <table class="mp-table w-full text-xs">
                             <thead><tr><th>Tasks</th><th>Bldg#3</th><th>Bldg#5</th></tr></thead><tbody>`;
                     ensureArray(dept.tasks).forEach((task, tIdx) => {
+                        const v3 = data[`b3_${dept.name}_${task}`] ?? data[`b3_${dIdx}_${tIdx}`] ?? '';
+                        const v5 = data[`b5_${dept.name}_${task}`] ?? data[`b5_${dIdx}_${tIdx}`] ?? '';
                         html += `<tr><td>${task}</td>
-                            <td class="p-0"><input type="number" id="admin-mp-b3-${dIdx}-${tIdx}" value="${data[`b3_${dIdx}_${tIdx}`]||''}" class="w-full border-none text-center p-1 outline-none focus:ring-1 admin-col-b3"></td>
-                            <td class="p-0"><input type="number" id="admin-mp-b5-${dIdx}-${tIdx}" value="${data[`b5_${dIdx}_${tIdx}`]||''}" class="w-full border-none text-center p-1 outline-none focus:ring-1 admin-col-b5"></td>
+                            <td class="p-0"><input type="number" id="admin-mp-b3-${dIdx}-${tIdx}" value="${v3}" class="w-full border-none text-center p-1 outline-none focus:ring-1 admin-col-b3"></td>
+                            <td class="p-0"><input type="number" id="admin-mp-b5-${dIdx}-${tIdx}" value="${v5}" class="w-full border-none text-center p-1 outline-none focus:ring-1 admin-col-b5"></td>
                         </tr>`;
                     });
                     html += `</tbody></table></div>`;
@@ -2799,21 +2806,21 @@
             let newData = {};
             if (adminEditingModule === 'target-board') {
                 targetDepts.forEach((dept, i) => { 
-                    newData[i] = {
+                    newData[dept] = {
                         target: document.getElementById(`admin-tgt-t-${i}`).value,
                         achieve: document.getElementById(`admin-tgt-a-${i}`).value
                     };
                 });
             } else if (adminEditingModule === 'dept-pendency') {
                 pendencyDepts.forEach((dept, i) => {
-                    newData[`b3_${i}`] = document.getElementById(`admin-pen-b3-${i}`).value;
-                    newData[`b5_${i}`] = document.getElementById(`admin-pen-b5-${i}`).value;
+                    newData[`b3_${dept}`] = document.getElementById(`admin-pen-b3-${i}`).value;
+                    newData[`b5_${dept}`] = document.getElementById(`admin-pen-b5-${i}`).value;
                 });
             } else if (adminEditingModule === 'manpower') {
                 manpowerConfig.forEach((dept, dIdx) => {
                     ensureArray(dept.tasks).forEach((task, tIdx) => {
-                        newData[`b3_${dIdx}_${tIdx}`] = document.getElementById(`admin-mp-b3-${dIdx}-${tIdx}`).value;
-                        newData[`b5_${dIdx}_${tIdx}`] = document.getElementById(`admin-mp-b5-${dIdx}-${tIdx}`).value;
+                        newData[`b3_${dept.name}_${task}`] = document.getElementById(`admin-mp-b3-${dIdx}-${tIdx}`).value;
+                        newData[`b5_${dept.name}_${task}`] = document.getElementById(`admin-mp-b5-${dIdx}-${tIdx}`).value;
                     });
                 });
             } else {
@@ -2973,8 +2980,8 @@
                 const input = document.getElementById(`mis-tgt-input-tt-${i}`);
                 if (input && !input.readOnly && !input.disabled && input.closest('tr').style.display !== 'none') {
                     if(input.value.trim() !== '') {
-                        if (!data[i]) data[i] = { target: '', achieve: '' };
-                        data[i].target = input.value;
+                        if (!data[dept]) data[dept] = data[i] ? { ...data[i] } : { target: '', achieve: '' };
+                        data[dept].target = input.value;
                         hasData = true;
                     }
                 }
@@ -3071,9 +3078,9 @@
                         const tdYestAchieve = document.getElementById(`mis-tgt-ya-${i}`);
                         const inputTodayTarget = document.getElementById(`mis-tgt-input-tt-${i}`);
 
-                        const ytVal = misTgtDataYest[i]?.target || '';
-                        const yaVal = misTgtDataYest[i]?.achieve || '';
-                        const ttVal = misTgtDataToday[i]?.target || '';
+                        const ytVal = misTgtDataYest[deptName]?.target ?? misTgtDataYest[i]?.target ?? '';
+                        const yaVal = misTgtDataYest[deptName]?.achieve ?? misTgtDataYest[i]?.achieve ?? '';
+                        const ttVal = misTgtDataToday[deptName]?.target ?? misTgtDataToday[i]?.target ?? '';
 
                         if(tdYestTarget) tdYestTarget.innerText = ytVal;
                         if(tdYestAchieve) tdYestAchieve.innerText = yaVal;
@@ -3183,14 +3190,14 @@
                             tr.style.display = '';
                             if(achInput) {
                                 if(aDateChanged || aLocks[deptName] || !aDate || Object.keys(aData).length === 0) { 
-                                    achInput.value = (aData[i] && aData[i].achieve) !== undefined ? aData[i].achieve : ''; 
+                                    achInput.value = aData[deptName]?.achieve ?? aData[i]?.achieve ?? ''; 
                                 }
                                 if(aLocks[deptName] || !aDate || !showAchieve) { achInput.readOnly = true; achInput.classList.add('locked-input'); }
                                 else { achInput.readOnly = false; achInput.classList.remove('locked-input'); }
                             }
                             if(tgtInput) {
                                 if(tDateChanged || tLocks[deptName] || !tDate || Object.keys(tData).length === 0) { 
-                                    tgtInput.value = (tData[i] && tData[i].target) !== undefined ? tData[i].target : ''; 
+                                    tgtInput.value = tData[deptName]?.target ?? tData[i]?.target ?? ''; 
                                 }
                                 if(tLocks[deptName] || !tDate || !showTarget) { tgtInput.readOnly = true; tgtInput.classList.add('locked-input'); }
                                 else { tgtInput.readOnly = false; tgtInput.classList.remove('locked-input'); }
@@ -3227,8 +3234,8 @@
                         const tr = misPenRows[i];
                         if(!tr) return;
 
-                        const v3 = penData[`b3_${i}`] || '';
-                        const v5 = penData[`b5_${i}`] || '';
+                        const v3 = penData[`b3_${deptName}`] ?? penData[`b3_${i}`] ?? '';
+                        const v5 = penData[`b5_${deptName}`] ?? penData[`b5_${i}`] ?? '';
                         const tdV3 = document.getElementById(`mis-pen-b3-${i}`);
                         const tdV5 = document.getElementById(`mis-pen-b5-${i}`);
                         const tdTot = document.getElementById(`mis-pen-tot-${i}`);
@@ -3276,10 +3283,14 @@
                         const inB5 = document.getElementById(`user-pen-b5-${i}`);
                         
                         if(inB3) { 
-                            if(globalDateChanged || penLocks[`${deptName}_b3`] || !currentDateStr || Object.keys(penData).length === 0) inB3.value = penData[`b3_${i}`] || ''; 
+                            if(globalDateChanged || penLocks[`${deptName}_b3`] || !currentDateStr || Object.keys(penData).length === 0) {
+                                inB3.value = penData[`b3_${deptName}`] ?? penData[`b3_${i}`] ?? ''; 
+                            }
                         }
                         if(inB5) { 
-                            if(globalDateChanged || penLocks[`${deptName}_b5`] || !currentDateStr || Object.keys(penData).length === 0) inB5.value = penData[`b5_${i}`] || ''; 
+                            if(globalDateChanged || penLocks[`${deptName}_b5`] || !currentDateStr || Object.keys(penData).length === 0) {
+                                inB5.value = penData[`b5_${deptName}`] ?? penData[`b5_${i}`] ?? ''; 
+                            }
                         }
                         try { calcUserPendencyTotal(i); } catch(e){}
 
@@ -3347,8 +3358,8 @@
 
                 ensureArray(dept.tasks).forEach((task, tIdx) => {
                     try {
-                        const v3 = mpData[`b3_${dIdx}_${tIdx}`] || '';
-                        const v5 = mpData[`b5_${dIdx}_${tIdx}`] || '';
+                        const v3 = mpData[`b3_${dept.name}_${task}`] ?? mpData[`b3_${dIdx}_${tIdx}`] ?? '';
+                        const v5 = mpData[`b5_${dept.name}_${task}`] ?? mpData[`b5_${dIdx}_${tIdx}`] ?? '';
                         
                         sumMisB3 += parseInt(v3) || 0;
                         sumMisB5 += parseInt(v5) || 0;
@@ -3362,10 +3373,14 @@
                         const inB5 = document.getElementById(`user-mp-b5-${dIdx}-${tIdx}`);
                         
                         if(inB3) { 
-                            if(globalDateChanged || mpLocks[`${dept.name}_b3`] || !currentDateStr || Object.keys(mpData).length === 0) inB3.value = v3; 
+                            if(globalDateChanged || mpLocks[`${dept.name}_b3`] || !currentDateStr || Object.keys(mpData).length === 0) {
+                                inB3.value = v3; 
+                            }
                         }
                         if(inB5) { 
-                            if(globalDateChanged || mpLocks[`${dept.name}_b5`] || !currentDateStr || Object.keys(mpData).length === 0) inB5.value = v5; 
+                            if(globalDateChanged || mpLocks[`${dept.name}_b5`] || !currentDateStr || Object.keys(mpData).length === 0) {
+                                inB5.value = v5; 
+                            }
                         }
 
                         if (mpLocks[`${dept.name}_b3`] || !currentDateStr) {
@@ -3419,8 +3434,8 @@
                 const input = document.getElementById(`${type}-${i}`);
                 if (input && !input.readOnly && !input.disabled && input.closest('tr').style.display !== 'none') {
                     if(input.value.trim() !== '') {
-                        if (!data[i]) data[i] = { target: '', achieve: '' };
-                        data[i][type] = input.value;
+                        if (!data[dept]) data[dept] = data[i] ? { ...data[i] } : { target: '', achieve: '' };
+                        data[dept][type] = input.value;
                         locks[dept] = true;
                         hasData = true;
                     }
@@ -3455,14 +3470,14 @@
 
                 if(inB3 && !inB3.readOnly && !inB3.disabled && inB3.closest('tr').style.display !== 'none') { 
                     if(inB3.value.trim() !== '') { 
-                        data[`b3_${i}`] = inB3.value; 
+                        data[`b3_${dept}`] = inB3.value; 
                         hasData=true; 
                         locks[`${dept}_b3`] = true; 
                     }
                 }
                 if(inB5 && !inB5.readOnly && !inB5.disabled && inB5.closest('tr').style.display !== 'none') { 
                     if(inB5.value.trim() !== '') { 
-                        data[`b5_${i}`] = inB5.value; 
+                        data[`b5_${dept}`] = inB5.value; 
                         hasData=true; 
                         locks[`${dept}_b5`] = true; 
                     }
@@ -3499,14 +3514,14 @@
                     if(card && card.style.display !== 'none') {
                         if(inB3 && !inB3.readOnly && !inB3.disabled) { 
                             if(inB3.value.trim() !== '') { 
-                                data[`b3_${dIdx}_${tIdx}`] = inB3.value; 
+                                data[`b3_${dept.name}_${task}`] = inB3.value; 
                                 hasData = true; 
                                 deptB3Saved = true; 
                             }
                         }
                         if(inB5 && !inB5.readOnly && !inB5.disabled) { 
                             if(inB5.value.trim() !== '') { 
-                                data[`b5_${dIdx}_${tIdx}`] = inB5.value; 
+                                data[`b5_${dept.name}_${task}`] = inB5.value; 
                                 hasData = true; 
                                 deptB5Saved = true; 
                             }
