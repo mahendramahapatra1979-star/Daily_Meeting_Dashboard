@@ -773,6 +773,10 @@
         let lastTargetConfigStr = '';
         let lastPendencyConfigStr = '';
         let lastManpowerConfigStr = '';
+        
+        let lastLoadedADate = null;
+        let lastLoadedTDate = null;
+        let lastLoadedGlobalDate = null;
 
         const sidebarModules = [
             { id: 'data-file-upload', name: 'File Upload Section', category: 'MIS', dataKey: 'data-file-upload' },
@@ -1375,7 +1379,7 @@
                     }
                     
                     if (document.getElementById('app-container').style.display !== 'none') {
-                        try { handleDateChange(); checkFormLocks(); } catch(e) {}
+                        try { checkFormLocks(false, true); } catch(e) {}
                     }
                 } else {
                     safeInit();
@@ -2524,6 +2528,9 @@
                 alert("Data deleted successfully.");
                 loadAdminModulesList();
                 if(currentDateStr === dateVal) {
+                    // Reset inputs locally instantly
+                    if (dataKey === 'target-board') { lastLoadedADate = null; lastLoadedTDate = null; }
+                    else { lastLoadedGlobalDate = null; }
                     try { handleDateChange(); } catch(e) {}
                 }
             }
@@ -2545,6 +2552,8 @@
                 alert("Data and locks cleared successfully.");
                 loadAdminModulesList();
                 if(currentDateStr === dateStr) {
+                    if (adminEditingModule === 'target-board') { lastLoadedADate = null; lastLoadedTDate = null; }
+                    else { lastLoadedGlobalDate = null; }
                     try { handleDateChange(); } catch(e) {}
                 }
             }
@@ -2654,21 +2663,6 @@
                 group.style.display = 'none';
                 icon.style.transform = 'rotate(0deg)';
             }
-        }
-
-        function getTargetSubCategory(deptName) {
-            const d = deptName.toUpperCase();
-            if(d.includes("QC")) return "QC";
-            if(d.includes("GRN")) return "GRN";
-            if(d.includes("PUTAWAY")) return "PUTAWAY";
-            if(d.includes("CLAIMS")) return "CLAIMS";
-            if(d.includes("REFIN")) return "REFIN";
-            if(d.includes("RTV")) return "RTV";
-            if(d.includes("CYCLE")) return "CYCLE";
-            if(d.includes("FORWARD") || d.includes("FWD")) return "FWD";
-            if(d.includes("M2M")) return "M2M";
-            if(d.includes("PHOTO")) return "PHOTO";
-            return "OTHER";
         }
 
         function hasPerm(mod, bldg, subCat) {
@@ -2918,6 +2912,11 @@
             const aLocks = aDate ? JSON.parse(localStorage.getItem(`lock_target-board_${aDate}_achieve`)) || {} : {};
             const tLocks = tDate ? JSON.parse(localStorage.getItem(`lock_target-board_${tDate}_target`)) || {} : {};
 
+            const aDateChanged = (aDate !== lastLoadedADate);
+            const tDateChanged = (tDate !== lastLoadedTDate);
+            if (aDateChanged) lastLoadedADate = aDate;
+            if (tDateChanged) lastLoadedTDate = tDate;
+
             const userTbody = document.getElementById('user-target-tbody');
             if(userTbody) {
                 const userTargetRows = userTbody.querySelectorAll('tr');
@@ -2928,9 +2927,6 @@
                         
                         const achInput = document.getElementById(`achieve-${i}`);
                         const tgtInput = document.getElementById(`target-${i}`);
-                        
-                        if(achInput) achInput.value = (aData[i] && aData[i].achieve) !== undefined ? aData[i].achieve : '';
-                        if(tgtInput) tgtInput.value = (tData[i] && tData[i].target) !== undefined ? tData[i].target : '';
 
                         let b3Auth = false; let b5Auth = false;
                         if (isSuperAdmin) { 
@@ -2948,10 +2944,16 @@
                         } else {
                             tr.style.display = '';
                             if(achInput) {
+                                if(aDateChanged || aLocks[deptName] || !aDate || Object.keys(aData).length === 0) { 
+                                    achInput.value = (aData[i] && aData[i].achieve) !== undefined ? aData[i].achieve : ''; 
+                                }
                                 if(aLocks[deptName] || !aDate) { achInput.readOnly = true; achInput.classList.add('locked-input'); }
                                 else { achInput.readOnly = false; achInput.classList.remove('locked-input'); }
                             }
                             if(tgtInput) {
+                                if(tDateChanged || tLocks[deptName] || !tDate || Object.keys(tData).length === 0) { 
+                                    tgtInput.value = (tData[i] && tData[i].target) !== undefined ? tData[i].target : ''; 
+                                }
                                 if(tLocks[deptName] || !tDate) { tgtInput.readOnly = true; tgtInput.classList.add('locked-input'); }
                                 else { tgtInput.readOnly = false; tgtInput.classList.remove('locked-input'); }
                             }
@@ -2967,6 +2969,9 @@
             if (btnSaveTargetBtn) btnSaveTargetBtn.disabled = !tDate || !isUI('btn-save-target');
 
             // ================= DEPT PENDENCY =================
+            const globalDateChanged = (currentDateStr !== lastLoadedGlobalDate);
+            if (globalDateChanged) lastLoadedGlobalDate = currentDateStr;
+
             const penData = JSON.parse(localStorage.getItem(`data_dept-pendency_${currentDateStr}`)) || {};
             const penLocks = JSON.parse(localStorage.getItem(`lock_dept-pendency_${currentDateStr}`)) || {};
 
@@ -3026,8 +3031,12 @@
                         const inB3 = document.getElementById(`user-pen-b3-${i}`);
                         const inB5 = document.getElementById(`user-pen-b5-${i}`);
                         
-                        if(inB3) { inB3.value = penData[`b3_${i}`] || ''; }
-                        if(inB5) { inB5.value = penData[`b5_${i}`] || ''; }
+                        if(inB3) { 
+                            if(globalDateChanged || penLocks[`${deptName}_b3`] || !currentDateStr || Object.keys(penData).length === 0) inB3.value = penData[`b3_${i}`] || ''; 
+                        }
+                        if(inB5) { 
+                            if(globalDateChanged || penLocks[`${deptName}_b5`] || !currentDateStr || Object.keys(penData).length === 0) inB5.value = penData[`b5_${i}`] || ''; 
+                        }
                         try { calcUserPendencyTotal(i); } catch(e){}
 
                         if(!b3Auth && !b5Auth) {
@@ -3108,8 +3117,12 @@
                         const inB3 = document.getElementById(`user-mp-b3-${dIdx}-${tIdx}`);
                         const inB5 = document.getElementById(`user-mp-b5-${dIdx}-${tIdx}`);
                         
-                        if(inB3) { inB3.value = v3; }
-                        if(inB5) { inB5.value = v5; }
+                        if(inB3) { 
+                            if(globalDateChanged || mpLocks[`${dept.name}_b3`] || !currentDateStr || Object.keys(mpData).length === 0) inB3.value = v3; 
+                        }
+                        if(inB5) { 
+                            if(globalDateChanged || mpLocks[`${dept.name}_b5`] || !currentDateStr || Object.keys(mpData).length === 0) inB5.value = v5; 
+                        }
 
                         if (mpLocks[`${dept.name}_b3`] || !currentDateStr) {
                             if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
@@ -3230,6 +3243,9 @@
             let locks = JSON.parse(localStorage.getItem(`lock_manpower_${currentDateStr}`)) || {};
 
             manpowerConfig.forEach((dept, dIdx) => {
+                let deptB3Saved = false;
+                let deptB5Saved = false;
+                
                 ensureArray(dept.tasks).forEach((task, tIdx) => {
                     const inB3 = document.getElementById(`user-mp-b3-${dIdx}-${tIdx}`);
                     const inB5 = document.getElementById(`user-mp-b5-${dIdx}-${tIdx}`);
@@ -3240,18 +3256,20 @@
                             if(inB3.value.trim() !== '') { 
                                 data[`b3_${dIdx}_${tIdx}`] = inB3.value; 
                                 hasData = true; 
-                                locks[`${dept.name}_b3`] = true; 
+                                deptB3Saved = true; 
                             }
                         }
                         if(inB5 && !inB5.readOnly && !inB5.disabled) { 
                             if(inB5.value.trim() !== '') { 
                                 data[`b5_${dIdx}_${tIdx}`] = inB5.value; 
                                 hasData = true; 
-                                locks[`${dept.name}_b5`] = true; 
+                                deptB5Saved = true; 
                             }
                         }
                     }
                 });
+                if (deptB3Saved) locks[`${dept.name}_b3`] = true;
+                if (deptB5Saved) locks[`${dept.name}_b5`] = true;
             });
 
             if(!hasData) { alert("You don't have authorization or cannot save empty data!"); return; }
