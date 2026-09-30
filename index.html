@@ -2656,6 +2656,21 @@
             }
         }
 
+        function getTargetSubCategory(deptName) {
+            const d = deptName.toUpperCase();
+            if(d.includes("QC")) return "QC";
+            if(d.includes("GRN")) return "GRN";
+            if(d.includes("PUTAWAY")) return "PUTAWAY";
+            if(d.includes("CLAIMS")) return "CLAIMS";
+            if(d.includes("REFIN")) return "REFIN";
+            if(d.includes("RTV")) return "RTV";
+            if(d.includes("CYCLE")) return "CYCLE";
+            if(d.includes("FORWARD") || d.includes("FWD")) return "FWD";
+            if(d.includes("M2M")) return "M2M";
+            if(d.includes("PHOTO")) return "PHOTO";
+            return "OTHER";
+        }
+
         function hasPerm(mod, bldg, subCat) {
             if (!userPermissions[mod]) return false;
             const arr = userPermissions[mod][bldg];
@@ -3019,13 +3034,17 @@
                             tr.style.display = 'none';
                         } else {
                             tr.style.display = ''; 
-                            if(penLocks[deptName] || !currentDateStr) {
+                            
+                            if (penLocks[`${deptName}_b3`] || !currentDateStr) {
                                 if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
-                                if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
                             } else {
                                 if(b3Auth && inB3) { inB3.readOnly = false; inB3.classList.remove('locked-input'); } 
                                 else if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
+                            }
 
+                            if (penLocks[`${deptName}_b5`] || !currentDateStr) {
+                                if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
+                            } else {
                                 if(b5Auth && inB5) { inB5.readOnly = false; inB5.classList.remove('locked-input'); } 
                                 else if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
                             }
@@ -3092,16 +3111,20 @@
                         if(inB3) { inB3.value = v3; }
                         if(inB5) { inB5.value = v5; }
 
-                        if(mpLocks[dept.name] || !currentDateStr) {
+                        if (mpLocks[`${dept.name}_b3`] || !currentDateStr) {
                             if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
-                            if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
                         } else {
                             if(usrB3Auth && inB3) { inB3.readOnly = false; inB3.classList.remove('locked-input'); } 
                             else if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
-                            
+                        }
+
+                        if (mpLocks[`${dept.name}_b5`] || !currentDateStr) {
+                            if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
+                        } else {
                             if(usrB5Auth && inB5) { inB5.readOnly = false; inB5.classList.remove('locked-input'); } 
                             else if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
                         }
+
                     } catch(e){}
                 });
 
@@ -3171,16 +3194,21 @@
             pendencyDepts.forEach((dept, i) => {
                 const inB3 = document.getElementById(`user-pen-b3-${i}`);
                 const inB5 = document.getElementById(`user-pen-b5-${i}`);
-                let rowSaved = false;
 
                 if(inB3 && !inB3.readOnly && !inB3.disabled && inB3.closest('tr').style.display !== 'none') { 
-                    if(inB3.value.trim() !== '') { data[`b3_${i}`] = inB3.value; hasData=true; rowSaved=true; }
+                    if(inB3.value.trim() !== '') { 
+                        data[`b3_${i}`] = inB3.value; 
+                        hasData=true; 
+                        locks[`${dept}_b3`] = true; 
+                    }
                 }
                 if(inB5 && !inB5.readOnly && !inB5.disabled && inB5.closest('tr').style.display !== 'none') { 
-                    if(inB5.value.trim() !== '') { data[`b5_${i}`] = inB5.value; hasData=true; rowSaved=true; }
+                    if(inB5.value.trim() !== '') { 
+                        data[`b5_${i}`] = inB5.value; 
+                        hasData=true; 
+                        locks[`${dept}_b5`] = true; 
+                    }
                 }
-                
-                if (rowSaved) locks[dept] = true;
             });
             
             if(!hasData) { alert("You don't have authorization or cannot save empty data!"); return; }
@@ -3202,7 +3230,6 @@
             let locks = JSON.parse(localStorage.getItem(`lock_manpower_${currentDateStr}`)) || {};
 
             manpowerConfig.forEach((dept, dIdx) => {
-                let deptSaved = false;
                 ensureArray(dept.tasks).forEach((task, tIdx) => {
                     const inB3 = document.getElementById(`user-mp-b3-${dIdx}-${tIdx}`);
                     const inB5 = document.getElementById(`user-mp-b5-${dIdx}-${tIdx}`);
@@ -3210,14 +3237,21 @@
                     
                     if(card && card.style.display !== 'none') {
                         if(inB3 && !inB3.readOnly && !inB3.disabled) { 
-                            if(inB3.value.trim() !== '') { data[`b3_${dIdx}_${tIdx}`] = inB3.value; hasData=true; deptSaved = true; }
+                            if(inB3.value.trim() !== '') { 
+                                data[`b3_${dIdx}_${tIdx}`] = inB3.value; 
+                                hasData = true; 
+                                locks[`${dept.name}_b3`] = true; 
+                            }
                         }
                         if(inB5 && !inB5.readOnly && !inB5.disabled) { 
-                            if(inB5.value.trim() !== '') { data[`b5_${dIdx}_${tIdx}`] = inB5.value; hasData=true; deptSaved = true; }
+                            if(inB5.value.trim() !== '') { 
+                                data[`b5_${dIdx}_${tIdx}`] = inB5.value; 
+                                hasData = true; 
+                                locks[`${dept.name}_b5`] = true; 
+                            }
                         }
                     }
                 });
-                if (deptSaved) locks[dept.name] = true;
             });
 
             if(!hasData) { alert("You don't have authorization or cannot save empty data!"); return; }
