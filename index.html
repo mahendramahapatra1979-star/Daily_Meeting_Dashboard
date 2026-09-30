@@ -18,7 +18,7 @@
     </script>
 
     <style>
-        .hidden { display: none; }
+        .hidden { display: none !important; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         #sidebar { transition: margin-left 0.3s ease; width: 250px; flex-shrink: 0; background-color: #1f2937; color: white; height: 100vh; overflow-y: auto; }
         #sidebar.hidden-sidebar { margin-left: -250px; }
@@ -541,7 +541,7 @@
                     <div class="flex flex-wrap gap-2 justify-center">
                         <button id="btn-copy-text" onclick="copyAllAsText()" class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">📋 Copy as Text (Excel Format)</button>
                         <button id="btn-download-excel" onclick="downloadDashboardExcel()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">⬇️ Download Excel</button>
-                        <button id="btn-print-a4" onclick="window.print()" class="bg-blue-500 hover:bg-blue-400 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">🖨️ Print A4</button>
+                        <button id="btn-print-a4" onclick="window.print()" class="bg-blue-50 hover:bg-blue-400 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">🖨️ Print A4</button>
                         <button id="btn-email-report" onclick="openEmailModal()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">✉️ Email Report</button>
                     </div>
                 </div>
@@ -789,6 +789,15 @@
             if (Array.isArray(val)) return val;
             if (typeof val === 'object') return Object.values(val);
             return [];
+        }
+
+        function isPastDate(dateStr) {
+            if (!dateStr) return false;
+            const selected = new Date(dateStr);
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            selected.setHours(0,0,0,0);
+            return selected < today;
         }
 
         // Helper to format dynamic departments
@@ -1426,7 +1435,7 @@
                     const data = snapshot.val() || {};
                     
                     // --- SYNC DELETIONS FROM FIREBASE TO LOCALSTORAGE ---
-                    const syncPrefixes = ['wms_', 'admin_master_pass', 'ui_controls', 'upload_exclusion', 'target_depts', 'pendency_depts', 'manpower_config', 'auth_', 'data_', 'lock_'];
+                    const syncPrefixes = ['wms_', 'admin_master_pass', 'ui_controls', 'upload_exclusion', 'target_depts', 'pendency_depts', 'manpower_config', 'auth_', 'data_', 'lock_', 'admin_unlock_'];
                     const localKeys = Object.keys(localStorage);
                     
                     localKeys.forEach(k => {
@@ -2455,6 +2464,7 @@
                 loadUserAuthGrid();
             } else if (tabId === 'admin-data') {
                 renderUploadRules();
+                loadAdminModulesList();
             }
         }
 
@@ -2635,7 +2645,9 @@
             let html = '';
             
             const adminManagementModules = [
-                { dataKey: 'target-board', name: 'Data Entry Page' },
+                { dataKey: 'target-board-achieve', name: 'Data Entry Page (Achieve)' },
+                { dataKey: 'target-board-target', name: 'Data Entry Page (Target)' },
+                { dataKey: 'mis-target', name: 'MIS Today Target' },
                 { dataKey: 'dept-pendency', name: 'Dept. Pendency (Data Entry)' },
                 { dataKey: 'manpower', name: 'Manpower Detail Entry' },
                 { dataKey: 'overall-putaway', name: 'Overall Putaway (Upload)' },
@@ -2643,29 +2655,38 @@
                 { dataKey: 'returns-po', name: 'Returns PO (Upload)' }
             ];
 
+            const isPast = isPastDate(dateVal);
+
             adminManagementModules.forEach(mod => {
-                // Check if any locks exist for this module/date combination
                 let isLocked = false;
-                
-                if (mod.dataKey === 'target-board') {
-                    const lA = localStorage.getItem(`lock_target-board_${dateVal}_achieve`);
-                    const lT = localStorage.getItem(`lock_target-board_${dateVal}_target`);
-                    isLocked = (lA && lA !== "{}" && lA !== "0") || (lT && lT !== "{}" && lT !== "0");
-                } else {
-                    const lockStr = localStorage.getItem(`lock_${mod.dataKey}_${dateVal}`);
-                    if(lockStr) {
-                        if(lockStr === "1") isLocked = true;
-                        else {
-                            try {
-                                const lObj = JSON.parse(lockStr);
-                                if(Object.keys(lObj).length > 0) isLocked = true;
-                            } catch(e) { isLocked = true; } 
-                        }
+                let lockData = '';
+                const adminUnlock = localStorage.getItem(`admin_unlock_${mod.dataKey}_${dateVal}`) === "1";
+
+                if (mod.dataKey === 'target-board-achieve' || mod.dataKey === 'target-board-target' || mod.dataKey === 'dept-pendency' || mod.dataKey === 'manpower') {
+                    lockData = localStorage.getItem(`lock_${mod.dataKey}_${dateVal}`);
+                    if (lockData) {
+                        try {
+                            const lObj = JSON.parse(lockData);
+                            if(Object.keys(lObj).length > 0) isLocked = true;
+                        } catch(e) { isLocked = true; }
                     }
+                } else {
+                    lockData = localStorage.getItem(`lock_${mod.dataKey}_${dateVal}`);
+                    if (lockData === "1") isLocked = true;
+                }
+
+                // If past date and not explicitly unlocked by admin, it's locked visually
+                if (isPast && !adminUnlock) {
+                    isLocked = true;
                 }
                 
-                const statusBadge = isLocked ? `<span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">Locked (Saved)</span>` : `<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Active (Open)</span>`;
-                const btnActivate = isLocked ? `<button onclick="adminActivateModule('${mod.dataKey}', '${dateVal}')" class="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold py-1 px-3 rounded shadow transition">Activate (Unlock)</button>` : '';
+                const statusBadge = isLocked 
+                    ? `<span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">${(isPast && !lockData) ? 'Locked (Past Date)' : 'Locked (Saved)'}</span>` 
+                    : `<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Active (Open)</span>`;
+                
+                const btnActivate = isLocked 
+                    ? `<button onclick="adminActivateModule('${mod.dataKey}', '${dateVal}')" class="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold py-1 px-3 rounded shadow transition">Activate (Unlock)</button>` 
+                    : '';
                 
                 html += `
                     <div class="flex justify-between items-center p-3 border bg-white rounded shadow-sm">
@@ -2683,13 +2704,9 @@
         function adminActivateModule(dataKey, dateVal) {
             if(confirm("This will unlock the module so data can be re-entered or re-uploaded. Continue?")) {
                 removeFromDB(`lock_${dataKey}_${dateVal}`);
-                
-                // Extra check for target-board split locks
-                if (dataKey === 'target-board') {
-                    removeFromDB(`lock_${dataKey}_${dateVal}_achieve`);
-                    removeFromDB(`lock_${dataKey}_${dateVal}_target`);
+                if (isPastDate(dateVal)) {
+                    saveToDB(`admin_unlock_${dataKey}_${dateVal}`, "1");
                 }
-                
                 loadAdminModulesList();
                 try { checkFormLocks(true); } catch(e) {}
             }
@@ -2697,42 +2714,56 @@
 
         function adminDeleteModuleDataDirect(dataKey, dateVal) {
             if(confirm(`Are you sure you want to permanently delete all data and locks for ${dataKey} on ${dateVal}?`)) {
-                removeFromDB(`data_${dataKey}_${dateVal}`);
-                removeFromDB(`lock_${dataKey}_${dateVal}`);
-                
-                if (dataKey === 'target-board') {
-                    removeFromDB(`lock_${dataKey}_${dateVal}_achieve`);
-                    removeFromDB(`lock_${dataKey}_${dateVal}_target`);
+                if (dataKey.startsWith('target-board') || dataKey === 'mis-target') {
+                    removeFromDB(`data_target-board_${dateVal}`);
+                    removeFromDB(`lock_target-board-achieve_${dateVal}`);
+                    removeFromDB(`lock_target-board-target_${dateVal}`);
+                    removeFromDB(`lock_mis-target_${dateVal}`);
+                    removeFromDB(`admin_unlock_target-board-achieve_${dateVal}`);
+                    removeFromDB(`admin_unlock_target-board-target_${dateVal}`);
+                    removeFromDB(`admin_unlock_mis-target_${dateVal}`);
+                } else {
+                    removeFromDB(`data_${dataKey}_${dateVal}`);
+                    removeFromDB(`lock_${dataKey}_${dateVal}`);
+                    removeFromDB(`admin_unlock_${dataKey}_${dateVal}`);
                 }
 
                 alert("Data deleted successfully.");
                 loadAdminModulesList();
-                if(currentDateStr === dateVal) {
-                    // Reset inputs locally instantly
-                    if (dataKey === 'target-board') { lastLoadedADate = null; lastLoadedTDate = null; }
+                if(currentDateStr === dateVal || (dataKey.startsWith('target-board') && (dateVal===lastLoadedADate || dateVal===lastLoadedTDate))) {
+                    if (dataKey.startsWith('target-board') || dataKey === 'mis-target') { lastLoadedADate = null; lastLoadedTDate = null; }
                     else { lastLoadedGlobalDate = null; }
                     try { handleDateChange(); } catch(e) {}
                 }
             }
         }
 
+        let adminEditingKey = '';
+        let adminEditingModule = '';
+
         function adminDeleteModuleData() {
             if(confirm("Are you sure you want to permanently clear/delete all data for this module on this date?")) {
-                removeFromDB(adminEditingKey);
                 const dateStr = adminEditingKey.split('_').pop();
-                const lockKey = `lock_${adminEditingModule}_${dateStr}`;
-                removeFromDB(lockKey);
                 
-                if (adminEditingModule === 'target-board') {
-                    removeFromDB(`lock_${adminEditingModule}_${dateStr}_achieve`);
-                    removeFromDB(`lock_${adminEditingModule}_${dateStr}_target`);
+                if (adminEditingModule.startsWith('target-board') || adminEditingModule === 'mis-target') {
+                    removeFromDB(`data_target-board_${dateStr}`);
+                    removeFromDB(`lock_target-board-achieve_${dateStr}`);
+                    removeFromDB(`lock_target-board-target_${dateStr}`);
+                    removeFromDB(`lock_mis-target_${dateStr}`);
+                    removeFromDB(`admin_unlock_target-board-achieve_${dateStr}`);
+                    removeFromDB(`admin_unlock_target-board-target_${dateStr}`);
+                    removeFromDB(`admin_unlock_mis-target_${dateStr}`);
+                } else {
+                    removeFromDB(adminEditingKey);
+                    removeFromDB(`lock_${adminEditingModule}_${dateStr}`);
+                    removeFromDB(`admin_unlock_${adminEditingModule}_${dateStr}`);
                 }
                 
                 closeAdminEditor();
                 alert("Data and locks cleared successfully.");
                 loadAdminModulesList();
-                if(currentDateStr === dateStr) {
-                    if (adminEditingModule === 'target-board') { lastLoadedADate = null; lastLoadedTDate = null; }
+                if(currentDateStr === dateStr || dateStr===lastLoadedADate || dateStr===lastLoadedTDate) {
+                    if (adminEditingModule.startsWith('target-board') || adminEditingModule === 'mis-target') { lastLoadedADate = null; lastLoadedTDate = null; }
                     else { lastLoadedGlobalDate = null; }
                     try { handleDateChange(); } catch(e) {}
                 }
@@ -2740,7 +2771,7 @@
         }
 
         function adminEditModuleData(dataKey, dateVal, modName) {
-            adminEditingKey = `data_${dataKey}_${dateVal}`;
+            adminEditingKey = (dataKey.startsWith('target-board') || dataKey === 'mis-target') ? `data_target-board_${dateVal}` : `data_${dataKey}_${dateVal}`;
             adminEditingModule = dataKey; 
             const rawData = localStorage.getItem(adminEditingKey);
             const data = rawData ? JSON.parse(rawData) : {};
@@ -2755,7 +2786,7 @@
                 <button onclick="adminDeleteModuleData()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1.5 px-4 rounded shadow transition">Delete Data</button>
             </div>`;
 
-            if (dataKey === 'target-board') {
+            if (dataKey.startsWith('target-board') || dataKey === 'mis-target') {
                 html += `<table class="w-full text-left text-sm border"><thead class="bg-gray-200"><tr><th class="p-2 border">Department</th><th class="p-2 border">Achieve</th><th class="p-2 border">Target</th></tr></thead><tbody>`;
                 targetDepts.forEach((dept, i) => {
                     const aVal = data[dept]?.achieve ?? data[i]?.achieve ?? '';
@@ -2804,7 +2835,7 @@
 
         function adminSaveModifiedData() {
             let newData = {};
-            if (adminEditingModule === 'target-board') {
+            if (adminEditingModule.startsWith('target-board') || adminEditingModule === 'mis-target') {
                 targetDepts.forEach((dept, i) => { 
                     newData[dept] = {
                         target: document.getElementById(`admin-tgt-t-${i}`).value,
@@ -2989,12 +3020,14 @@
 
             if(hasData) {
                 saveToDB(`data_target-board_${currentDateStr}`, JSON.stringify(data));
+                saveToDB(`lock_mis-target_${currentDateStr}`, "1");
                 
                 const alertBox = document.getElementById(`alert-mis-target-success`);
                 if(alertBox) {
                     alertBox.style.display = 'block';
                     setTimeout(() => { alertBox.style.display = 'none'; }, 2000);
                 }
+                checkFormLocks();
             } else {
                 alert("Please enter target data before saving.");
             }
@@ -3005,34 +3038,47 @@
             const isSuperAdmin = isAdminMode || (loggedInUser && loggedInUser.name === "ADMIN_OVERRIDE");
             const isUI = (id) => uiControlsState[id] !== false; // Check global enable/disable state
 
+            const isPastGlobal = isPastDate(currentDateStr);
+
             // Upload Sections Locks Check
-            const opLocked = localStorage.getItem(`lock_overall-putaway_${currentDateStr}`);
-            const pbwLocked = localStorage.getItem(`lock_putaway-bldg-wise_${currentDateStr}`);
-            const poLocked = localStorage.getItem(`lock_returns-po_${currentDateStr}`);
+            const opLocked = localStorage.getItem(`lock_overall-putaway_${currentDateStr}`) === "1";
+            const adminUnlockOp = localStorage.getItem(`admin_unlock_overall-putaway_${currentDateStr}`) === "1";
+            const autoLockOp = isPastGlobal && !adminUnlockOp;
+            const finalOpLocked = opLocked || autoLockOp;
+
+            const pbwLocked = localStorage.getItem(`lock_putaway-bldg-wise_${currentDateStr}`) === "1";
+            const adminUnlockPbw = localStorage.getItem(`admin_unlock_putaway-bldg-wise_${currentDateStr}`) === "1";
+            const autoLockPbw = isPastGlobal && !adminUnlockPbw;
+            const finalPbwLocked = pbwLocked || autoLockPbw;
+
+            const poLocked = localStorage.getItem(`lock_returns-po_${currentDateStr}`) === "1";
+            const adminUnlockPo = localStorage.getItem(`admin_unlock_returns-po_${currentDateStr}`) === "1";
+            const autoLockPo = isPastGlobal && !adminUnlockPo;
+            const finalPoLocked = poLocked || autoLockPo;
 
             const fileOp = document.getElementById('csv-upload-overall-central');
             const btnOp = document.getElementById('btn-upload-overall');
             const msgOp = document.getElementById('msg-lock-overall');
-            if (fileOp) fileOp.disabled = opLocked || !isUI('btn-upload-overall');
-            if (btnOp) btnOp.disabled = opLocked || !isUI('btn-upload-overall');
-            if (msgOp) msgOp.style.display = opLocked ? 'block' : 'none';
+            if (fileOp) fileOp.disabled = finalOpLocked || !isUI('btn-upload-overall');
+            if (btnOp) btnOp.disabled = finalOpLocked || !isUI('btn-upload-overall');
+            if (msgOp) msgOp.style.display = finalOpLocked ? 'block' : 'none';
 
             const filePbw = document.getElementById('csv-upload-putaway-central');
             const btnPbw = document.getElementById('btn-upload-putaway');
             const msgPbw = document.getElementById('msg-lock-putaway');
-            if (filePbw) filePbw.disabled = pbwLocked || !isUI('btn-upload-putaway');
-            if (btnPbw) btnPbw.disabled = pbwLocked || !isUI('btn-upload-putaway');
-            if (msgPbw) msgPbw.style.display = pbwLocked ? 'block' : 'none';
+            if (filePbw) filePbw.disabled = finalPbwLocked || !isUI('btn-upload-putaway');
+            if (btnPbw) btnPbw.disabled = finalPbwLocked || !isUI('btn-upload-putaway');
+            if (msgPbw) msgPbw.style.display = finalPbwLocked ? 'block' : 'none';
 
             const filePo = document.getElementById('csv-upload-po-central');
             const btnPo = document.getElementById('btn-upload-po');
             const msgPo = document.getElementById('msg-lock-po');
-            if (filePo) filePo.disabled = poLocked || !isUI('btn-upload-po');
-            if (btnPo) btnPo.disabled = poLocked || !isUI('btn-upload-po');
-            if (msgPo) msgPo.style.display = poLocked ? 'block' : 'none';
+            if (filePo) filePo.disabled = finalPoLocked || !isUI('btn-upload-po');
+            if (btnPo) btnPo.disabled = finalPoLocked || !isUI('btn-upload-po');
+            if (msgPo) msgPo.style.display = finalPoLocked ? 'block' : 'none';
             
             const btnAll = document.getElementById('btn-upload-all');
-            if (btnAll) btnAll.disabled = (opLocked && pbwLocked && poLocked) || !isUI('btn-upload-all');
+            if (btnAll) btnAll.disabled = (finalOpLocked && finalPbwLocked && finalPoLocked) || !isUI('btn-upload-all');
 
             const btnClear = document.getElementById('btn-clear-files');
             if (btnClear) btnClear.disabled = !isUI('btn-clear-files');
@@ -3060,8 +3106,16 @@
             const misTgtDataToday = JSON.parse(localStorage.getItem(`data_target-board_${currentDateStr}`)) || {};
             const misTgtDataYest = JSON.parse(localStorage.getItem(`data_target-board_${yDateStr}`)) || {};
             
+            const misTgtLocked = localStorage.getItem(`lock_mis-target_${currentDateStr}`) === "1";
+            const adminUnlockMIS = localStorage.getItem(`admin_unlock_mis-target_${currentDateStr}`) === "1";
+            const autoLockMIS = isPastGlobal && !adminUnlockMIS;
+            const finalMISLocked = misTgtLocked || autoLockMIS;
+
             const btnSaveMISTgt = document.getElementById('btn-save-mis-target');
-            if(btnSaveMISTgt) btnSaveMISTgt.style.display = isUI('mis-edit-target') ? 'block' : 'none';
+            if(btnSaveMISTgt) {
+                btnSaveMISTgt.style.display = isUI('mis-edit-target') ? 'block' : 'none';
+                btnSaveMISTgt.disabled = finalMISLocked;
+            }
 
             const misTbody = document.getElementById('mis-target-tbody');
             if(misTbody) {
@@ -3088,7 +3142,7 @@
                             if(forceDateChange || Object.keys(misTgtDataToday).length === 0) {
                                 inputTodayTarget.value = ttVal;
                             }
-                            if(!isUI('mis-edit-target')) {
+                            if(finalMISLocked || !isUI('mis-edit-target')) {
                                 inputTodayTarget.readOnly = true;
                                 inputTodayTarget.classList.add('locked-input');
                             } else {
@@ -3135,8 +3189,16 @@
             const aData = aDate ? JSON.parse(localStorage.getItem(`data_target-board_${aDate}`)) || {} : {};
             const tData = tDate ? JSON.parse(localStorage.getItem(`data_target-board_${tDate}`)) || {} : {};
 
-            const aLocks = aDate ? JSON.parse(localStorage.getItem(`lock_target-board_${aDate}_achieve`)) || {} : {};
-            const tLocks = tDate ? JSON.parse(localStorage.getItem(`lock_target-board_${tDate}_target`)) || {} : {};
+            const aLocks = aDate ? JSON.parse(localStorage.getItem(`lock_target-board-achieve_${aDate}`)) || {} : {};
+            const tLocks = tDate ? JSON.parse(localStorage.getItem(`lock_target-board-target_${tDate}`)) || {} : {};
+
+            const isPastA = isPastDate(aDate);
+            const adminUnlockA = localStorage.getItem(`admin_unlock_target-board-achieve_${aDate}`) === "1";
+            const autoLockA = isPastA && !adminUnlockA;
+
+            const isPastT = isPastDate(tDate);
+            const adminUnlockT = localStorage.getItem(`admin_unlock_target-board-target_${tDate}`) === "1";
+            const autoLockT = isPastT && !adminUnlockT;
 
             const aDateChanged = forceDateChange || (aDate !== lastLoadedADate);
             const tDateChanged = forceDateChange || (tDate !== lastLoadedTDate);
@@ -3189,17 +3251,17 @@
                         } else {
                             tr.style.display = '';
                             if(achInput) {
-                                if(aDateChanged || aLocks[deptName] || !aDate || Object.keys(aData).length === 0) { 
+                                if(aDateChanged || aLocks[deptName] || autoLockA || !aDate || Object.keys(aData).length === 0) { 
                                     achInput.value = aData[deptName]?.achieve ?? aData[i]?.achieve ?? ''; 
                                 }
-                                if(aLocks[deptName] || !aDate || !showAchieve) { achInput.readOnly = true; achInput.classList.add('locked-input'); }
+                                if(aLocks[deptName] || autoLockA || !aDate || !showAchieve) { achInput.readOnly = true; achInput.classList.add('locked-input'); }
                                 else { achInput.readOnly = false; achInput.classList.remove('locked-input'); }
                             }
                             if(tgtInput) {
-                                if(tDateChanged || tLocks[deptName] || !tDate || Object.keys(tData).length === 0) { 
+                                if(tDateChanged || tLocks[deptName] || autoLockT || !tDate || Object.keys(tData).length === 0) { 
                                     tgtInput.value = tData[deptName]?.target ?? tData[i]?.target ?? ''; 
                                 }
-                                if(tLocks[deptName] || !tDate || !showTarget) { tgtInput.readOnly = true; tgtInput.classList.add('locked-input'); }
+                                if(tLocks[deptName] || autoLockT || !tDate || !showTarget) { tgtInput.readOnly = true; tgtInput.classList.add('locked-input'); }
                                 else { tgtInput.readOnly = false; tgtInput.classList.remove('locked-input'); }
                             }
                         }
@@ -3209,19 +3271,19 @@
 
             const btnSaveAchieve = document.getElementById('btn-save-achieve');
             if (btnSaveAchieve) {
-                btnSaveAchieve.disabled = !aDate || !showAchieve;
+                btnSaveAchieve.disabled = !aDate || autoLockA || !showAchieve;
                 btnSaveAchieve.parentNode.style.display = showAchieve ? 'flex' : 'none';
             }
             
             const btnSaveTargetBtn = document.getElementById('btn-save-target');
             if (btnSaveTargetBtn) {
-                btnSaveTargetBtn.disabled = !tDate || !showTarget;
+                btnSaveTargetBtn.disabled = !tDate || autoLockT || !showTarget;
                 btnSaveTargetBtn.parentNode.style.display = showTarget ? 'flex' : 'none';
             }
 
             // ================= DEPT PENDENCY =================
-            const globalDateChanged = forceDateChange || (currentDateStr !== lastLoadedGlobalDate);
-            if (globalDateChanged) lastLoadedGlobalDate = currentDateStr;
+            const adminUnlockPen = localStorage.getItem(`admin_unlock_dept-pendency_${currentDateStr}`) === "1";
+            const autoLockPen = isPastGlobal && !adminUnlockPen;
 
             const penData = JSON.parse(localStorage.getItem(`data_dept-pendency_${currentDateStr}`)) || {};
             const penLocks = JSON.parse(localStorage.getItem(`lock_dept-pendency_${currentDateStr}`)) || {};
@@ -3258,7 +3320,7 @@
             }
 
             const btnSavePen = document.getElementById('btn-save-pendency');
-            if(btnSavePen) btnSavePen.disabled = !currentDateStr || !isUI('btn-save-pendency');
+            if(btnSavePen) btnSavePen.disabled = !currentDateStr || autoLockPen || !isUI('btn-save-pendency');
             const alertPenSuc = document.getElementById('alert-pendency-success');
             if(alertPenSuc) alertPenSuc.style.display = 'none';
 
@@ -3283,12 +3345,12 @@
                         const inB5 = document.getElementById(`user-pen-b5-${i}`);
                         
                         if(inB3) { 
-                            if(globalDateChanged || penLocks[`${deptName}_b3`] || !currentDateStr || Object.keys(penData).length === 0) {
+                            if(globalDateChanged || penLocks[`${deptName}_b3`] || autoLockPen || !currentDateStr || Object.keys(penData).length === 0) {
                                 inB3.value = penData[`b3_${deptName}`] ?? penData[`b3_${i}`] ?? ''; 
                             }
                         }
                         if(inB5) { 
-                            if(globalDateChanged || penLocks[`${deptName}_b5`] || !currentDateStr || Object.keys(penData).length === 0) {
+                            if(globalDateChanged || penLocks[`${deptName}_b5`] || autoLockPen || !currentDateStr || Object.keys(penData).length === 0) {
                                 inB5.value = penData[`b5_${deptName}`] ?? penData[`b5_${i}`] ?? ''; 
                             }
                         }
@@ -3299,14 +3361,14 @@
                         } else {
                             tr.style.display = ''; 
                             
-                            if (penLocks[`${deptName}_b3`] || !currentDateStr) {
+                            if (penLocks[`${deptName}_b3`] || autoLockPen || !currentDateStr) {
                                 if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
                             } else {
                                 if(b3Auth && inB3) { inB3.readOnly = false; inB3.classList.remove('locked-input'); } 
                                 else if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
                             }
 
-                            if (penLocks[`${deptName}_b5`] || !currentDateStr) {
+                            if (penLocks[`${deptName}_b5`] || autoLockPen || !currentDateStr) {
                                 if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
                             } else {
                                 if(b5Auth && inB5) { inB5.readOnly = false; inB5.classList.remove('locked-input'); } 
@@ -3318,6 +3380,9 @@
             }
 
             // ================= MANPOWER DASHBOARD =================
+            const adminUnlockMp = localStorage.getItem(`admin_unlock_manpower_${currentDateStr}`) === "1";
+            const autoLockMp = isPastGlobal && !adminUnlockMp;
+
             const mpData = JSON.parse(localStorage.getItem(`data_manpower_${currentDateStr}`)) || {};
             const mpLocks = JSON.parse(localStorage.getItem(`lock_manpower_${currentDateStr}`)) || {};
 
@@ -3373,24 +3438,24 @@
                         const inB5 = document.getElementById(`user-mp-b5-${dIdx}-${tIdx}`);
                         
                         if(inB3) { 
-                            if(globalDateChanged || mpLocks[`${dept.name}_b3`] || !currentDateStr || Object.keys(mpData).length === 0) {
+                            if(globalDateChanged || mpLocks[`${dept.name}_b3`] || autoLockMp || !currentDateStr || Object.keys(mpData).length === 0) {
                                 inB3.value = v3; 
                             }
                         }
                         if(inB5) { 
-                            if(globalDateChanged || mpLocks[`${dept.name}_b5`] || !currentDateStr || Object.keys(mpData).length === 0) {
+                            if(globalDateChanged || mpLocks[`${dept.name}_b5`] || autoLockMp || !currentDateStr || Object.keys(mpData).length === 0) {
                                 inB5.value = v5; 
                             }
                         }
 
-                        if (mpLocks[`${dept.name}_b3`] || !currentDateStr) {
+                        if (mpLocks[`${dept.name}_b3`] || autoLockMp || !currentDateStr) {
                             if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
                         } else {
                             if(usrB3Auth && inB3) { inB3.readOnly = false; inB3.classList.remove('locked-input'); } 
                             else if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
                         }
 
-                        if (mpLocks[`${dept.name}_b5`] || !currentDateStr) {
+                        if (mpLocks[`${dept.name}_b5`] || autoLockMp || !currentDateStr) {
                             if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
                         } else {
                             if(usrB5Auth && inB5) { inB5.readOnly = false; inB5.classList.remove('locked-input'); } 
@@ -3411,7 +3476,7 @@
             const alertMpSuc = document.getElementById('alert-manpower-success');
             if(alertMpSuc) alertMpSuc.style.display = 'none';
             const btnSaveMp = document.getElementById('btn-save-manpower');
-            if(btnSaveMp) btnSaveMp.disabled = !currentDateStr || !isUI('btn-save-manpower');
+            if(btnSaveMp) btnSaveMp.disabled = !currentDateStr || autoLockMp || !isUI('btn-save-manpower');
             
             updateTargetManpower();
         }
@@ -3427,7 +3492,7 @@
             }
             
             let data = JSON.parse(localStorage.getItem(`data_target-board_${dateStr}`)) || {};
-            let locks = JSON.parse(localStorage.getItem(`lock_target-board_${dateStr}_${type}`)) || {};
+            let locks = JSON.parse(localStorage.getItem(`lock_target-board-${type}_${dateStr}`)) || {};
             let hasData = false;
 
             targetDepts.forEach((dept, i) => {
@@ -3444,7 +3509,7 @@
 
             if(hasData) {
                 saveToDB(`data_target-board_${dateStr}`, JSON.stringify(data));
-                saveToDB(`lock_target-board_${dateStr}_${type}`, JSON.stringify(locks));
+                saveToDB(`lock_target-board-${type}_${dateStr}`, JSON.stringify(locks));
                 
                 const alertBox = document.getElementById(`alert-${type}-success`);
                 if(alertBox) {
