@@ -13,6 +13,7 @@
     <!-- EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script type="text/javascript">
+        // YAHAN APNI PUBLIC KEY DALEIN (EmailJS > Account > Public Key)
         emailjs.init("YOUR_PUBLIC_KEY"); 
     </script>
 
@@ -541,7 +542,7 @@
                         <button id="btn-copy-text" onclick="copyAllAsText()" class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">📋 Copy as Text (Excel Format)</button>
                         <button id="btn-download-excel" onclick="downloadDashboardExcel()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">⬇️ Download Excel</button>
                         <button id="btn-print-a4" onclick="window.print()" class="bg-blue-500 hover:bg-blue-400 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">🖨️ Print A4</button>
-                        <button id="btn-email-report" onclick="openEmailModal()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">✉️ Email Report</button>
+                        <button id="btn-email-report" onclick="openEmailModal()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">✉️️ Email Report</button>
                     </div>
                 </div>
 
@@ -795,13 +796,14 @@
             return str.replace(/[\.\#\$\/\[\]]/g, '_');
         }
 
-        function isPastDate(dateStr) {
+        function isPastDate(dateStr, graceDays = 0) {
             if (!dateStr) return false;
             const selected = new Date(dateStr);
             const today = new Date();
             today.setHours(0,0,0,0);
             selected.setHours(0,0,0,0);
-            return selected < today;
+            const diffDays = Math.round((today - selected) / (1000 * 60 * 60 * 24));
+            return diffDays > graceDays;
         }
 
         // Helper to format dynamic departments
@@ -1155,6 +1157,7 @@
             setTimeout(() => { document.getElementById('ui-save-msg').classList.add('hidden'); document.getElementById('ui-save-msg').style.display = 'none'; }, 2000);
             
             try { checkFormLocks(true); } catch(e){}
+            alert("Action completed successfully! UI Configuration saved.");
         }
 
         function renderUploadRules() {
@@ -1191,6 +1194,7 @@
             document.getElementById('rule-save-msg').classList.remove('hidden');
             document.getElementById('rule-save-msg').style.display = 'inline-flex';
             setTimeout(() => { document.getElementById('rule-save-msg').classList.add('hidden'); document.getElementById('rule-save-msg').style.display = 'none'; }, 2000);
+            alert("Action completed successfully! CSV Upload Rules saved.");
         }
 
         // ================= DYNAMIC UI TABLE GENERATORS =================
@@ -1514,7 +1518,15 @@
                     }
                     
                     if (document.getElementById('app-container').style.display !== 'none') {
-                        try { handleDateChange(); checkFormLocks(true); } catch(e) {}
+                        try { 
+                            checkFormLocks(false); 
+                            renderReturnsPOTable(); 
+                            renderPutawayBldgWiseTable(); 
+                            renderOverallPutaway();
+                            manpowerConfig.forEach((dept, dIdx) => {
+                                try { calcManpowerTotal(dIdx); } catch(e) {}
+                            });
+                        } catch(e) {}
                     }
                 } else {
                     safeInit();
@@ -2152,6 +2164,7 @@
                 saveToDB('wms_report_emails', JSON.stringify(reportEmails));
                 emailInput.value = '';
                 renderAdminEmails();
+                alert("Action completed successfully! Email added.");
             } else { alert("Email already exists."); }
         }
         function deleteAdminEmail(idx) {
@@ -2236,6 +2249,7 @@
             
             try { if(currentDateStr) checkFormLocks(true); } catch(e){}
             renderDeptConfigUI(); 
+            alert("Action completed successfully! Dashboard Layout saved.");
         }
 
         // ================= TASK MANAGEMENT =================
@@ -2285,6 +2299,7 @@
             buildAuthGrid();
             loadUserAuthGrid();
             try { if(currentDateStr) checkFormLocks(true); } catch(e){}
+            alert("Action completed successfully! Task Configuration saved.");
         }
 
         // ================= ADMIN MODAL, LOGIN & OTP SYSTEM =================
@@ -2519,6 +2534,7 @@
 
             saveToDB('wms_users', JSON.stringify(wmsUsers));
             populateLoginUsers(); populateAuthUserDropdown(); clearUserForm(); renderAdminUsers();
+            alert("Action completed successfully! User updated.");
         }
         function editAdminUser(idx) {
             document.getElementById('add-u-name').value = wmsUsers[idx].name;
@@ -2638,6 +2654,7 @@
             saveToDB(`auth_${uname}`, JSON.stringify(perms));
             document.getElementById('auth-save-msg').classList.remove('hidden');
             setTimeout(() => document.getElementById('auth-save-msg').classList.add('hidden'), 2000);
+            alert("Action completed successfully! Permissions saved.");
         }
 
         function loadAdminModulesList() {
@@ -2713,6 +2730,7 @@
                 }
                 loadAdminModulesList();
                 try { checkFormLocks(true); } catch(e) {}
+                alert("Action completed successfully! Module activated.");
             }
         }
 
@@ -2875,6 +2893,7 @@
             setTimeout(() => document.getElementById('admin-data-msg').classList.add('hidden'), 2000);
             
             try { handleDateChange(); } catch(e) {}
+            alert("Action completed successfully! Modified Data Saved.");
         }
 
         // ================= SECTION NAVIGATION =================
@@ -3041,6 +3060,7 @@
                     setTimeout(() => { alertBox.style.display = 'none'; }, 2000);
                 }
                 checkFormLocks();
+                alert("Action completed successfully! Today Target (MIS) saved.");
             } else {
                 alert("Please enter target data before saving.");
             }
@@ -3206,7 +3226,7 @@
             const aLocks = aDate ? JSON.parse(localStorage.getItem(`lock_target-board-achieve_${aDate}`)) || {} : {};
             const tLocks = tDate ? JSON.parse(localStorage.getItem(`lock_target-board-target_${tDate}`)) || {} : {};
 
-            const isPastA = isPastDate(aDate);
+            const isPastA = isPastDate(aDate, 1);
             const adminUnlockA = localStorage.getItem(`admin_unlock_target-board-achieve_${aDate}`) === "1";
             const autoLockA = isPastA && !adminUnlockA;
 
@@ -3368,12 +3388,12 @@
                         const inB5 = document.getElementById(`user-pen-b5-${i}`);
                         
                         if(inB3) { 
-                            if(globalDateChanged || penLocks[`${sDept}_b3`] || autoLockPen || !currentDateStr || Object.keys(penData).length === 0) {
+                            if(globalDateChanged || penLocks[`${sDept}_b3`] || autoLockPen || !currentDateStr) {
                                 inB3.value = penData[`b3_${sDept}`] ?? penData[`b3_${i}`] ?? ''; 
                             }
                         }
                         if(inB5) { 
-                            if(globalDateChanged || penLocks[`${sDept}_b5`] || autoLockPen || !currentDateStr || Object.keys(penData).length === 0) {
+                            if(globalDateChanged || penLocks[`${sDept}_b5`] || autoLockPen || !currentDateStr) {
                                 inB5.value = penData[`b5_${sDept}`] ?? penData[`b5_${i}`] ?? ''; 
                             }
                         }
@@ -3463,12 +3483,12 @@
                         const inB5 = document.getElementById(`user-mp-b5-${dIdx}-${tIdx}`);
                         
                         if(inB3) { 
-                            if(globalDateChanged || mpLocks[`${sDept}_b3`] || autoLockMp || !currentDateStr || Object.keys(mpData).length === 0) {
+                            if(globalDateChanged || mpLocks[`${sDept}_b3`] || autoLockMp || !currentDateStr) {
                                 inB3.value = v3; 
                             }
                         }
                         if(inB5) { 
-                            if(globalDateChanged || mpLocks[`${sDept}_b5`] || autoLockMp || !currentDateStr || Object.keys(mpData).length === 0) {
+                            if(globalDateChanged || mpLocks[`${sDept}_b5`] || autoLockMp || !currentDateStr) {
                                 inB5.value = v5; 
                             }
                         }
@@ -3543,6 +3563,7 @@
                     setTimeout(() => { alertBox.style.display = 'none'; }, 2000);
                 }
                 checkFormLocks();
+                alert(`Action completed successfully! ${type === 'achieve' ? 'Achieve' : 'Target'} Data saved.`);
             } else {
                 alert("You don't have authorization or cannot save empty data!");
             }
@@ -3558,7 +3579,6 @@
                 const sDept = sanitizeKey(dept);
                 const inB3 = document.getElementById(`user-pen-b3-${i}`);
                 const inB5 = document.getElementById(`user-pen-b5-${i}`);
-                let rowSaved = false;
 
                 if(inB3 && !inB3.readOnly && !inB3.disabled && inB3.closest('tr').style.display !== 'none') { 
                     if(inB3.value.trim() !== '') { 
@@ -3586,6 +3606,7 @@
                 setTimeout(() => { alertBox.style.display = 'none'; }, 2000);
             }
             checkFormLocks();
+            alert("Action completed successfully! Pendency Data saved.");
         }
 
         function saveUserManpower(e) {
@@ -3636,6 +3657,7 @@
                 setTimeout(() => { alertBox.style.display = 'none'; }, 2000);
             }
             checkFormLocks();
+            alert("Action completed successfully! Manpower Data saved.");
         }
 
         function calcUserPendencyTotal(i) {
