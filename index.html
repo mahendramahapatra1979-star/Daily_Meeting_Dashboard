@@ -13,7 +13,6 @@
     <!-- EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script type="text/javascript">
-        // YAHAN APNI PUBLIC KEY DALEIN (EmailJS > Account > Public Key)
         emailjs.init("YOUR_PUBLIC_KEY"); 
     </script>
 
@@ -541,7 +540,7 @@
                     <div class="flex flex-wrap gap-2 justify-center">
                         <button id="btn-copy-text" onclick="copyAllAsText()" class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">📋 Copy as Text (Excel Format)</button>
                         <button id="btn-download-excel" onclick="downloadDashboardExcel()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">⬇️ Download Excel</button>
-                        <button id="btn-print-a4" onclick="window.print()" class="bg-blue-50 hover:bg-blue-400 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">🖨️ Print A4</button>
+                        <button id="btn-print-a4" onclick="window.print()" class="bg-blue-500 hover:bg-blue-400 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">🖨️ Print A4</button>
                         <button id="btn-email-report" onclick="openEmailModal()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">✉️ Email Report</button>
                     </div>
                 </div>
@@ -789,6 +788,11 @@
             if (Array.isArray(val)) return val;
             if (typeof val === 'object') return Object.values(val);
             return [];
+        }
+
+        function sanitizeKey(str) {
+            if (typeof str !== 'string') return str;
+            return str.replace(/[\.\#\$\/\[\]]/g, '_');
         }
 
         function isPastDate(dateStr) {
@@ -1150,7 +1154,7 @@
             document.getElementById('ui-save-msg').style.display = 'inline-flex';
             setTimeout(() => { document.getElementById('ui-save-msg').classList.add('hidden'); document.getElementById('ui-save-msg').style.display = 'none'; }, 2000);
             
-            try { checkFormLocks(); } catch(e){}
+            try { checkFormLocks(true); } catch(e){}
         }
 
         function renderUploadRules() {
@@ -1343,7 +1347,7 @@
             const mpData = JSON.parse(localStorage.getItem(`data_manpower_${currentDateStr}`)) || {};
             
             function getMpVal(deptName, taskName, dIdx, tIdx, bldg) { 
-                return parseInt(mpData[`${bldg}_${deptName}_${taskName}`]) || parseInt(mpData[`${bldg}_${dIdx}_${tIdx}`]) || 0; 
+                return parseInt(mpData[`${bldg}_${sanitizeKey(deptName)}_${sanitizeKey(taskName)}`]) || parseInt(mpData[`${bldg}_${dIdx}_${tIdx}`]) || 0; 
             }
             function getDIdx(id) { return manpowerConfig.findIndex(d => d.id === id); }
             
@@ -2789,8 +2793,9 @@
             if (dataKey.startsWith('target-board') || dataKey === 'mis-target') {
                 html += `<table class="w-full text-left text-sm border"><thead class="bg-gray-200"><tr><th class="p-2 border">Department</th><th class="p-2 border">Achieve</th><th class="p-2 border">Target</th></tr></thead><tbody>`;
                 targetDepts.forEach((dept, i) => {
-                    const aVal = data[dept]?.achieve ?? data[i]?.achieve ?? '';
-                    const tVal = data[dept]?.target ?? data[i]?.target ?? '';
+                    const sDept = sanitizeKey(dept);
+                    const aVal = data[sDept]?.achieve ?? data[i]?.achieve ?? '';
+                    const tVal = data[sDept]?.target ?? data[i]?.target ?? '';
                     html += `<tr><td class="p-2 border font-semibold">${dept}</td>
                              <td class="p-1 border"><input type="number" id="admin-tgt-a-${i}" value="${aVal}" class="w-full border p-1 rounded admin-col-achieve"></td>
                              <td class="p-1 border"><input type="number" id="admin-tgt-t-${i}" value="${tVal}" class="w-full border p-1 rounded admin-col-target"></td></tr>`;
@@ -2799,8 +2804,9 @@
             } else if (dataKey === 'dept-pendency') {
                 html += `<table class="w-full text-left text-sm border"><thead class="bg-gray-200"><tr><th class="p-2 border">Department</th><th class="p-2 border">Bldg#3</th><th class="p-2 border">Bldg#5</th></tr></thead><tbody>`;
                 pendencyDepts.forEach((dept, i) => {
-                    const v3 = data[`b3_${dept}`] ?? data[`b3_${i}`] ?? '';
-                    const v5 = data[`b5_${dept}`] ?? data[`b5_${i}`] ?? '';
+                    const sDept = sanitizeKey(dept);
+                    const v3 = data[`b3_${sDept}`] ?? data[`b3_${i}`] ?? '';
+                    const v5 = data[`b5_${sDept}`] ?? data[`b5_${i}`] ?? '';
                     html += `<tr><td class="p-2 border font-semibold">${dept}</td>
                         <td class="p-1 border"><input type="number" id="admin-pen-b3-${i}" value="${v3}" class="w-full border p-1 rounded admin-col-b3"></td>
                         <td class="p-1 border"><input type="number" id="admin-pen-b5-${i}" value="${v5}" class="w-full border p-1 rounded admin-col-b5"></td></tr>`;
@@ -2814,8 +2820,10 @@
                         <table class="mp-table w-full text-xs">
                             <thead><tr><th>Tasks</th><th>Bldg#3</th><th>Bldg#5</th></tr></thead><tbody>`;
                     ensureArray(dept.tasks).forEach((task, tIdx) => {
-                        const v3 = data[`b3_${dept.name}_${task}`] ?? data[`b3_${dIdx}_${tIdx}`] ?? '';
-                        const v5 = data[`b5_${dept.name}_${task}`] ?? data[`b5_${dIdx}_${tIdx}`] ?? '';
+                        const sDept = sanitizeKey(dept.name);
+                        const sTask = sanitizeKey(task);
+                        const v3 = data[`b3_${sDept}_${sTask}`] ?? data[`b3_${dIdx}_${tIdx}`] ?? '';
+                        const v5 = data[`b5_${sDept}_${sTask}`] ?? data[`b5_${dIdx}_${tIdx}`] ?? '';
                         html += `<tr><td>${task}</td>
                             <td class="p-0"><input type="number" id="admin-mp-b3-${dIdx}-${tIdx}" value="${v3}" class="w-full border-none text-center p-1 outline-none focus:ring-1 admin-col-b3"></td>
                             <td class="p-0"><input type="number" id="admin-mp-b5-${dIdx}-${tIdx}" value="${v5}" class="w-full border-none text-center p-1 outline-none focus:ring-1 admin-col-b5"></td>
@@ -2837,21 +2845,25 @@
             let newData = {};
             if (adminEditingModule.startsWith('target-board') || adminEditingModule === 'mis-target') {
                 targetDepts.forEach((dept, i) => { 
-                    newData[dept] = {
+                    const sDept = sanitizeKey(dept);
+                    newData[sDept] = {
                         target: document.getElementById(`admin-tgt-t-${i}`).value,
                         achieve: document.getElementById(`admin-tgt-a-${i}`).value
                     };
                 });
             } else if (adminEditingModule === 'dept-pendency') {
                 pendencyDepts.forEach((dept, i) => {
-                    newData[`b3_${dept}`] = document.getElementById(`admin-pen-b3-${i}`).value;
-                    newData[`b5_${dept}`] = document.getElementById(`admin-pen-b5-${i}`).value;
+                    const sDept = sanitizeKey(dept);
+                    newData[`b3_${sDept}`] = document.getElementById(`admin-pen-b3-${i}`).value;
+                    newData[`b5_${sDept}`] = document.getElementById(`admin-pen-b5-${i}`).value;
                 });
             } else if (adminEditingModule === 'manpower') {
                 manpowerConfig.forEach((dept, dIdx) => {
+                    const sDept = sanitizeKey(dept.name);
                     ensureArray(dept.tasks).forEach((task, tIdx) => {
-                        newData[`b3_${dept.name}_${task}`] = document.getElementById(`admin-mp-b3-${dIdx}-${tIdx}`).value;
-                        newData[`b5_${dept.name}_${task}`] = document.getElementById(`admin-mp-b5-${dIdx}-${tIdx}`).value;
+                        const sTask = sanitizeKey(task);
+                        newData[`b3_${sDept}_${sTask}`] = document.getElementById(`admin-mp-b3-${dIdx}-${tIdx}`).value;
+                        newData[`b5_${sDept}_${sTask}`] = document.getElementById(`admin-mp-b5-${dIdx}-${tIdx}`).value;
                     });
                 });
             } else {
@@ -3008,11 +3020,12 @@
             let hasData = false;
 
             targetDepts.forEach((dept, i) => {
+                const sDept = sanitizeKey(dept);
                 const input = document.getElementById(`mis-tgt-input-tt-${i}`);
                 if (input && !input.readOnly && !input.disabled && input.closest('tr').style.display !== 'none') {
                     if(input.value.trim() !== '') {
-                        if (!data[dept]) data[dept] = data[i] ? { ...data[i] } : { target: '', achieve: '' };
-                        data[dept].target = input.value;
+                        if (!data[sDept]) data[sDept] = data[i] ? { ...data[i] } : { target: '', achieve: '' };
+                        data[sDept].target = input.value;
                         hasData = true;
                     }
                 }
@@ -3128,13 +3141,14 @@
                         const tr = misTargetRows[i];
                         if(!tr) return;
 
+                        const sDept = sanitizeKey(deptName);
                         const tdYestTarget = document.getElementById(`mis-tgt-yt-${i}`);
                         const tdYestAchieve = document.getElementById(`mis-tgt-ya-${i}`);
                         const inputTodayTarget = document.getElementById(`mis-tgt-input-tt-${i}`);
 
-                        const ytVal = misTgtDataYest[deptName]?.target ?? misTgtDataYest[i]?.target ?? '';
-                        const yaVal = misTgtDataYest[deptName]?.achieve ?? misTgtDataYest[i]?.achieve ?? '';
-                        const ttVal = misTgtDataToday[deptName]?.target ?? misTgtDataToday[i]?.target ?? '';
+                        const ytVal = misTgtDataYest[sDept]?.target ?? misTgtDataYest[i]?.target ?? '';
+                        const yaVal = misTgtDataYest[sDept]?.achieve ?? misTgtDataYest[i]?.achieve ?? '';
+                        const ttVal = misTgtDataToday[sDept]?.target ?? misTgtDataToday[i]?.target ?? '';
 
                         if(tdYestTarget) tdYestTarget.innerText = ytVal;
                         if(tdYestAchieve) tdYestAchieve.innerText = yaVal;
@@ -3227,6 +3241,8 @@
                         const tr = userTargetRows[i];
                         if(!tr) return;
                         
+                        const sDept = sanitizeKey(deptName);
+                        
                         const achTd = tr.querySelector('.td-achieve');
                         const tgtTd = tr.querySelector('.td-target');
                         if(achTd) achTd.style.display = showAchieve ? '' : 'none';
@@ -3251,17 +3267,19 @@
                         } else {
                             tr.style.display = '';
                             if(achInput) {
-                                if(aDateChanged || aLocks[deptName] || autoLockA || !aDate || Object.keys(aData).length === 0) { 
-                                    achInput.value = aData[deptName]?.achieve ?? aData[i]?.achieve ?? ''; 
+                                const shouldUpdateA = aDateChanged || aLocks[sDept] || autoLockA || !aDate;
+                                if(shouldUpdateA) { 
+                                    achInput.value = aData[sDept]?.achieve ?? aData[i]?.achieve ?? ''; 
                                 }
-                                if(aLocks[deptName] || autoLockA || !aDate || !showAchieve) { achInput.readOnly = true; achInput.classList.add('locked-input'); }
+                                if(aLocks[sDept] || autoLockA || !aDate || !showAchieve) { achInput.readOnly = true; achInput.classList.add('locked-input'); }
                                 else { achInput.readOnly = false; achInput.classList.remove('locked-input'); }
                             }
                             if(tgtInput) {
-                                if(tDateChanged || tLocks[deptName] || autoLockT || !tDate || Object.keys(tData).length === 0) { 
-                                    tgtInput.value = tData[deptName]?.target ?? tData[i]?.target ?? ''; 
+                                const shouldUpdateT = tDateChanged || tLocks[sDept] || autoLockT || !tDate;
+                                if(shouldUpdateT) { 
+                                    tgtInput.value = tData[sDept]?.target ?? tData[i]?.target ?? ''; 
                                 }
-                                if(tLocks[deptName] || autoLockT || !tDate || !showTarget) { tgtInput.readOnly = true; tgtInput.classList.add('locked-input'); }
+                                if(tLocks[sDept] || autoLockT || !tDate || !showTarget) { tgtInput.readOnly = true; tgtInput.classList.add('locked-input'); }
                                 else { tgtInput.readOnly = false; tgtInput.classList.remove('locked-input'); }
                             }
                         }
@@ -3282,6 +3300,9 @@
             }
 
             // ================= DEPT PENDENCY =================
+            const globalDateChanged = forceDateChange || (currentDateStr !== lastLoadedGlobalDate);
+            if (globalDateChanged) lastLoadedGlobalDate = currentDateStr;
+
             const adminUnlockPen = localStorage.getItem(`admin_unlock_dept-pendency_${currentDateStr}`) === "1";
             const autoLockPen = isPastGlobal && !adminUnlockPen;
 
@@ -3296,8 +3317,9 @@
                         const tr = misPenRows[i];
                         if(!tr) return;
 
-                        const v3 = penData[`b3_${deptName}`] ?? penData[`b3_${i}`] ?? '';
-                        const v5 = penData[`b5_${deptName}`] ?? penData[`b5_${i}`] ?? '';
+                        const sDept = sanitizeKey(deptName);
+                        const v3 = penData[`b3_${sDept}`] ?? penData[`b3_${i}`] ?? '';
+                        const v5 = penData[`b5_${sDept}`] ?? penData[`b5_${i}`] ?? '';
                         const tdV3 = document.getElementById(`mis-pen-b3-${i}`);
                         const tdV5 = document.getElementById(`mis-pen-b5-${i}`);
                         const tdTot = document.getElementById(`mis-pen-tot-${i}`);
@@ -3341,17 +3363,18 @@
                             b5Auth = hasPerm('user-dept-pendency', 'Bldg5', subCat);
                         }
                         
+                        const sDept = sanitizeKey(deptName);
                         const inB3 = document.getElementById(`user-pen-b3-${i}`);
                         const inB5 = document.getElementById(`user-pen-b5-${i}`);
                         
                         if(inB3) { 
-                            if(globalDateChanged || penLocks[`${deptName}_b3`] || autoLockPen || !currentDateStr || Object.keys(penData).length === 0) {
-                                inB3.value = penData[`b3_${deptName}`] ?? penData[`b3_${i}`] ?? ''; 
+                            if(globalDateChanged || penLocks[`${sDept}_b3`] || autoLockPen || !currentDateStr || Object.keys(penData).length === 0) {
+                                inB3.value = penData[`b3_${sDept}`] ?? penData[`b3_${i}`] ?? ''; 
                             }
                         }
                         if(inB5) { 
-                            if(globalDateChanged || penLocks[`${deptName}_b5`] || autoLockPen || !currentDateStr || Object.keys(penData).length === 0) {
-                                inB5.value = penData[`b5_${deptName}`] ?? penData[`b5_${i}`] ?? ''; 
+                            if(globalDateChanged || penLocks[`${sDept}_b5`] || autoLockPen || !currentDateStr || Object.keys(penData).length === 0) {
+                                inB5.value = penData[`b5_${sDept}`] ?? penData[`b5_${i}`] ?? ''; 
                             }
                         }
                         try { calcUserPendencyTotal(i); } catch(e){}
@@ -3361,14 +3384,14 @@
                         } else {
                             tr.style.display = ''; 
                             
-                            if (penLocks[`${deptName}_b3`] || autoLockPen || !currentDateStr) {
+                            if (penLocks[`${sDept}_b3`] || autoLockPen || !currentDateStr) {
                                 if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
                             } else {
                                 if(b3Auth && inB3) { inB3.readOnly = false; inB3.classList.remove('locked-input'); } 
                                 else if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
                             }
 
-                            if (penLocks[`${deptName}_b5`] || autoLockPen || !currentDateStr) {
+                            if (penLocks[`${sDept}_b5`] || autoLockPen || !currentDateStr) {
                                 if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
                             } else {
                                 if(b5Auth && inB5) { inB5.readOnly = false; inB5.classList.remove('locked-input'); } 
@@ -3389,6 +3412,7 @@
             manpowerConfig.forEach((dept, dIdx) => {
                 let misB3Auth = false, misB5Auth = false;
                 const subCat = getBaseDeptName(dept.name);
+                const sDept = sanitizeKey(dept.name);
 
                 if (isSuperAdmin) { 
                     misB3Auth = true; misB5Auth = true; 
@@ -3423,8 +3447,9 @@
 
                 ensureArray(dept.tasks).forEach((task, tIdx) => {
                     try {
-                        const v3 = mpData[`b3_${dept.name}_${task}`] ?? mpData[`b3_${dIdx}_${tIdx}`] ?? '';
-                        const v5 = mpData[`b5_${dept.name}_${task}`] ?? mpData[`b5_${dIdx}_${tIdx}`] ?? '';
+                        const sTask = sanitizeKey(task);
+                        const v3 = mpData[`b3_${sDept}_${sTask}`] ?? mpData[`b3_${dIdx}_${tIdx}`] ?? '';
+                        const v5 = mpData[`b5_${sDept}_${sTask}`] ?? mpData[`b5_${dIdx}_${tIdx}`] ?? '';
                         
                         sumMisB3 += parseInt(v3) || 0;
                         sumMisB5 += parseInt(v5) || 0;
@@ -3438,24 +3463,24 @@
                         const inB5 = document.getElementById(`user-mp-b5-${dIdx}-${tIdx}`);
                         
                         if(inB3) { 
-                            if(globalDateChanged || mpLocks[`${dept.name}_b3`] || autoLockMp || !currentDateStr || Object.keys(mpData).length === 0) {
+                            if(globalDateChanged || mpLocks[`${sDept}_b3`] || autoLockMp || !currentDateStr || Object.keys(mpData).length === 0) {
                                 inB3.value = v3; 
                             }
                         }
                         if(inB5) { 
-                            if(globalDateChanged || mpLocks[`${dept.name}_b5`] || autoLockMp || !currentDateStr || Object.keys(mpData).length === 0) {
+                            if(globalDateChanged || mpLocks[`${sDept}_b5`] || autoLockMp || !currentDateStr || Object.keys(mpData).length === 0) {
                                 inB5.value = v5; 
                             }
                         }
 
-                        if (mpLocks[`${dept.name}_b3`] || autoLockMp || !currentDateStr) {
+                        if (mpLocks[`${sDept}_b3`] || autoLockMp || !currentDateStr) {
                             if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
                         } else {
                             if(usrB3Auth && inB3) { inB3.readOnly = false; inB3.classList.remove('locked-input'); } 
                             else if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
                         }
 
-                        if (mpLocks[`${dept.name}_b5`] || autoLockMp || !currentDateStr) {
+                        if (mpLocks[`${sDept}_b5`] || autoLockMp || !currentDateStr) {
                             if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
                         } else {
                             if(usrB5Auth && inB5) { inB5.readOnly = false; inB5.classList.remove('locked-input'); } 
@@ -3496,12 +3521,13 @@
             let hasData = false;
 
             targetDepts.forEach((dept, i) => {
+                const sDept = sanitizeKey(dept);
                 const input = document.getElementById(`${type}-${i}`);
                 if (input && !input.readOnly && !input.disabled && input.closest('tr').style.display !== 'none') {
                     if(input.value.trim() !== '') {
-                        if (!data[dept]) data[dept] = data[i] ? { ...data[i] } : { target: '', achieve: '' };
-                        data[dept][type] = input.value;
-                        locks[dept] = true;
+                        if (!data[sDept]) data[sDept] = data[i] ? { ...data[i] } : { target: '', achieve: '' };
+                        data[sDept][type] = input.value;
+                        locks[sDept] = true;
                         hasData = true;
                     }
                 }
@@ -3529,22 +3555,23 @@
             let locks = JSON.parse(localStorage.getItem(`lock_dept-pendency_${currentDateStr}`)) || {};
             
             pendencyDepts.forEach((dept, i) => {
+                const sDept = sanitizeKey(dept);
                 const inB3 = document.getElementById(`user-pen-b3-${i}`);
                 const inB5 = document.getElementById(`user-pen-b5-${i}`);
                 let rowSaved = false;
 
                 if(inB3 && !inB3.readOnly && !inB3.disabled && inB3.closest('tr').style.display !== 'none') { 
                     if(inB3.value.trim() !== '') { 
-                        data[`b3_${dept}`] = inB3.value; 
+                        data[`b3_${sDept}`] = inB3.value; 
                         hasData=true; 
-                        locks[`${dept}_b3`] = true; 
+                        locks[`${sDept}_b3`] = true; 
                     }
                 }
                 if(inB5 && !inB5.readOnly && !inB5.disabled && inB5.closest('tr').style.display !== 'none') { 
                     if(inB5.value.trim() !== '') { 
-                        data[`b5_${dept}`] = inB5.value; 
+                        data[`b5_${sDept}`] = inB5.value; 
                         hasData=true; 
-                        locks[`${dept}_b5`] = true; 
+                        locks[`${sDept}_b5`] = true; 
                     }
                 }
             });
@@ -3568,10 +3595,12 @@
             let locks = JSON.parse(localStorage.getItem(`lock_manpower_${currentDateStr}`)) || {};
 
             manpowerConfig.forEach((dept, dIdx) => {
+                const sDept = sanitizeKey(dept.name);
                 let deptB3Saved = false;
                 let deptB5Saved = false;
                 
                 ensureArray(dept.tasks).forEach((task, tIdx) => {
+                    const sTask = sanitizeKey(task);
                     const inB3 = document.getElementById(`user-mp-b3-${dIdx}-${tIdx}`);
                     const inB5 = document.getElementById(`user-mp-b5-${dIdx}-${tIdx}`);
                     const card = document.getElementById(`user-mp-card-${dIdx}`);
@@ -3579,22 +3608,22 @@
                     if(card && card.style.display !== 'none') {
                         if(inB3 && !inB3.readOnly && !inB3.disabled) { 
                             if(inB3.value.trim() !== '') { 
-                                data[`b3_${dept.name}_${task}`] = inB3.value; 
+                                data[`b3_${sDept}_${sTask}`] = inB3.value; 
                                 hasData = true; 
                                 deptB3Saved = true; 
                             }
                         }
                         if(inB5 && !inB5.readOnly && !inB5.disabled) { 
                             if(inB5.value.trim() !== '') { 
-                                data[`b5_${dept.name}_${task}`] = inB5.value; 
+                                data[`b5_${sDept}_${sTask}`] = inB5.value; 
                                 hasData = true; 
                                 deptB5Saved = true; 
                             }
                         }
                     }
                 });
-                if (deptB3Saved) locks[`${dept.name}_b3`] = true;
-                if (deptB5Saved) locks[`${dept.name}_b5`] = true;
+                if (deptB3Saved) locks[`${sDept}_b3`] = true;
+                if (deptB5Saved) locks[`${sDept}_b5`] = true;
             });
 
             if(!hasData) { alert("You don't have authorization or cannot save empty data!"); return; }
