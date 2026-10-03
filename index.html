@@ -279,6 +279,38 @@
                         </select>
                     </div>
                 </div>
+                
+                <!-- NEW MIS SUB-FILTERS UI -->
+                <div id="mis-auth-filters" class="hidden mb-6 border p-4 bg-white shadow-sm rounded-lg">
+                    <h4 class="font-bold text-gray-800 mb-3 border-b pb-2 text-lg">MIS Sub-Sections Selection</h4>
+                    
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <!-- File Upload Box -->
+                        <div class="flex-1 bg-blue-50 border border-blue-200 p-4 rounded-lg flex flex-col justify-between">
+                            <label class="font-bold text-blue-900 flex items-center gap-2 cursor-pointer text-lg mb-3">
+                                <input type="checkbox" id="chk-all-file" onchange="toggleAllAuth('FILE', this.checked)" class="w-5 h-5">
+                                File Upload Section
+                            </label>
+                            <div class="flex gap-2 mt-auto">
+                                <button onclick="toggleVisibility('FILE')" class="bg-blue-200 hover:bg-blue-300 text-blue-900 px-3 py-2 rounded text-sm font-bold shadow-sm transition w-1/2">Show/Hide Options</button>
+                                <button onclick="saveAuthData('FILE')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-bold shadow-sm transition w-1/2">Save File Upload</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Dashboard Box -->
+                        <div class="flex-1 bg-green-50 border border-green-200 p-4 rounded-lg flex flex-col justify-between">
+                            <label class="font-bold text-green-900 flex items-center gap-2 cursor-pointer text-lg mb-3">
+                                <input type="checkbox" id="chk-all-dash" onchange="toggleAllAuth('DASH', this.checked)" class="w-5 h-5">
+                                Dashboard Section
+                            </label>
+                            <div class="flex gap-2 mt-auto">
+                                <button onclick="toggleVisibility('DASH')" class="bg-green-200 hover:bg-green-300 text-green-900 px-3 py-2 rounded text-sm font-bold shadow-sm transition w-1/2">Show/Hide Options</button>
+                                <button onclick="saveAuthData('DASH')" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-bold shadow-sm transition w-1/2">Save Dashboard</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="auth-grid-container" class="hidden flex flex-col gap-6">
                     <!-- BLDG 3 TABLE -->
                     <div class="overflow-x-auto border rounded bg-white shadow-sm">
@@ -314,9 +346,9 @@
                         </table>
                     </div>
 
-                    <div class="m-2">
-                        <button onclick="saveUserAuthGrid()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded shadow">Save Authorizations</button>
-                        <span id="auth-save-msg" class="ml-4 text-green-600 font-bold hidden">Permissions Saved Successfully!</span>
+                    <div class="m-2 flex gap-4 items-center">
+                        <button onclick="saveAuthData(null)" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded shadow">Save All Authorizations</button>
+                        <span id="auth-save-msg" class="text-green-600 font-bold hidden items-center">Permissions Saved Successfully!</span>
                     </div>
                 </div>
             </div>
@@ -540,9 +572,9 @@
                     <h2 class="text-xl font-bold text-white mb-3 md:mb-0">Full Dashboard Report</h2>
                     <div class="flex flex-wrap gap-2 justify-center">
                         <button id="btn-copy-text" onclick="copyAllAsText()" class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">📋 Copy as Text (Excel Format)</button>
-                        <button id="btn-download-excel" onclick="downloadDashboardExcel()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">⬇️ Download Excel</button>
+                        <button id="btn-download-excel" onclick="downloadDashboardExcel()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">⬇ Download Excel</button>
                         <button id="btn-print-a4" onclick="window.print()" class="bg-blue-500 hover:bg-blue-400 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">🖨️ Print A4</button>
-                        <button id="btn-email-report" onclick="openEmailModal()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">✉️️ Email Report</button>
+                        <button id="btn-email-report" onclick="openEmailModal()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded font-bold transition text-sm shadow disabled:bg-gray-400 disabled:cursor-not-allowed disabled:opacity-60">✉ Email Report</button>
                     </div>
                 </div>
 
@@ -550,7 +582,7 @@
                 <div id="data-file-upload" class="section-container module-section" style="display:none;">
                     <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 5px; color: #1f2937;">File Upload Section</h3>
                     <div class="grid grid-cols-1 gap-5">
-                        <div class="flex flex-col md:flex-row items-center justify-between bg-white p-4 border border-blue-100 rounded-lg shadow-sm hover:shadow transition">
+                        <div id="box-upload-overall" class="flex flex-col md:flex-row items-center justify-between bg-white p-4 border border-blue-100 rounded-lg shadow-sm hover:shadow transition">
                             <div class="font-bold text-gray-800 md:w-1/3 mb-3 md:mb-0">
                                 Overall putaway pending upload
                                 <div id="msg-lock-overall" class="text-red-500 text-[10px] uppercase tracking-wide font-extrabold mt-1 hidden">🔒 Locked by Admin</div>
@@ -558,7 +590,7 @@
                             <input type="file" id="csv-upload-overall-central" accept=".csv" class="text-sm bg-gray-50 border border-gray-300 p-2 rounded md:w-1/3 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-3 md:mb-0 disabled:opacity-50 disabled:cursor-not-allowed">
                             <button id="btn-upload-overall" class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-2 px-6 rounded transition shadow w-full md:w-40" onclick="uploadCentralCSV('overall')">Upload Single</button>
                         </div>
-                        <div class="flex flex-col md:flex-row items-center justify-between bg-white p-4 border border-blue-100 rounded-lg shadow-sm hover:shadow transition">
+                        <div id="box-upload-putaway" class="flex flex-col md:flex-row items-center justify-between bg-white p-4 border border-blue-100 rounded-lg shadow-sm hover:shadow transition">
                             <div class="font-bold text-gray-800 md:w-1/3 mb-3 md:mb-0">
                                 Putaway pending bldg wise upload
                                 <div id="msg-lock-putaway" class="text-red-500 text-[10px] uppercase tracking-wide font-extrabold mt-1 hidden">🔒 Locked by Admin</div>
@@ -566,7 +598,7 @@
                             <input type="file" id="csv-upload-putaway-central" accept=".csv" class="text-sm bg-gray-50 border border-gray-300 p-2 rounded md:w-1/3 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-3 md:mb-0 disabled:opacity-50 disabled:cursor-not-allowed">
                             <button id="btn-upload-putaway" class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-2 px-6 rounded transition shadow w-full md:w-40" onclick="uploadCentralCSV('putaway')">Upload Single</button>
                         </div>
-                        <div class="flex flex-col md:flex-row items-center justify-between bg-white p-4 border border-blue-100 rounded-lg shadow-sm hover:shadow transition">
+                        <div id="box-upload-po" class="flex flex-col md:flex-row items-center justify-between bg-white p-4 border border-blue-100 rounded-lg shadow-sm hover:shadow transition">
                             <div class="font-bold text-gray-800 md:w-1/3 mb-3 md:mb-0">
                                 Return po wise grn pending upload
                                 <div id="msg-lock-po" class="text-red-500 text-[10px] uppercase tracking-wide font-extrabold mt-1 hidden">🔒 Locked by Admin</div>
@@ -851,16 +883,16 @@
         let lastLoadedGlobalDate = null;
 
         const sidebarModules = [
-            { id: 'data-file-upload', name: 'File Upload Section', category: 'MIS', dataKey: 'data-file-upload' },
-            { id: 'target-board', name: 'Target Dash Board', category: 'MIS', dataKey: 'target-board' },
-            { id: 'mis-dept-pendency', name: 'Dept. Pendency (MIS View)', category: 'MIS', dataKey: 'dept-pendency' },
-            { id: 'mis-manpower', name: 'Manpower Dash Board', category: 'MIS', dataKey: 'manpower' },
-            { id: 'overall-putaway', name: 'Overall Putaway Pending', category: 'MIS', dataKey: 'overall-putaway' },
-            { id: 'putaway-bldg-wise', name: 'Putaway Pending Bldg wise', category: 'MIS', dataKey: 'putaway-bldg-wise' },
-            { id: 'returns-po', name: 'Returns PO wise GRN Pending', category: 'MIS', dataKey: 'returns-po' },
-            { id: 'user-data-entry', name: 'Data Entry Page', category: 'USER', dataKey: 'target-board' },
-            { id: 'user-dept-pendency', name: 'Dept. Pendency (Data Entry)', category: 'USER', dataKey: 'dept-pendency' },
-            { id: 'user-manpower', name: 'Manpower Detail Entry', category: 'USER', dataKey: 'manpower' }
+            { id: 'data-file-upload', name: 'File Upload Section', category: 'MIS', subCategory: 'IGNORE', dataKey: 'data-file-upload' },
+            { id: 'target-board', name: 'Target Dash Board', category: 'MIS', subCategory: 'DASH', dataKey: 'target-board' },
+            { id: 'mis-dept-pendency', name: 'Dept. Pendency (MIS View)', category: 'MIS', subCategory: 'DASH', dataKey: 'dept-pendency' },
+            { id: 'mis-manpower', name: 'Manpower Dash Board', category: 'MIS', subCategory: 'DASH', dataKey: 'manpower' },
+            { id: 'overall-putaway', name: 'Overall Putaway Pending', category: 'MIS', subCategory: 'FILE', dataKey: 'overall-putaway' },
+            { id: 'putaway-bldg-wise', name: 'Putaway Pending Bldg wise', category: 'MIS', subCategory: 'FILE', dataKey: 'putaway-bldg-wise' },
+            { id: 'returns-po', name: 'Returns PO wise GRN Pending', category: 'MIS', subCategory: 'FILE', dataKey: 'returns-po' },
+            { id: 'user-data-entry', name: 'Data Entry Page', category: 'USER', subCategory: 'USER', dataKey: 'target-board' },
+            { id: 'user-dept-pendency', name: 'Dept. Pendency (Data Entry)', category: 'USER', subCategory: 'USER', dataKey: 'dept-pendency' },
+            { id: 'user-manpower', name: 'Manpower Detail Entry', category: 'USER', subCategory: 'USER', dataKey: 'manpower' }
         ];
 
         function getDynamicSubCols() {
@@ -1387,24 +1419,35 @@
                 const dn = deptName.toUpperCase().trim();
                 
                 if (dn === "QC") val = calcDept('qc');
-                else if (dn === "GRN-3") val = calcDept('grn', 'b3', ['Cycle Count', 'QC Checking']);
-                else if (dn === "GRN-5") val = calcDept('grn', 'b5', ['Cycle Count', 'QC Checking']);
-                else if (dn === "PUTAWAY-3") val = calcDept('putaway', 'b3', ['Cycle Count', 'QC Checking']);
-                else if (dn === "PUTAWAY-5") val = calcDept('putaway', 'b5', ['Cycle Count', 'QC Checking']);
+                else if (dn === "GRN-3") val = calcDept('grn', 'b3');
+                else if (dn === "GRN-5") val = calcDept('grn', 'b5');
+                else if (dn === "PUTAWAY-3") val = calcDept('putaway', 'b3');
+                else if (dn === "PUTAWAY-5") val = calcDept('putaway', 'b5');
                 else if (dn === "CYCLE COUNT") val = calcTask(['Cycle Count']);
-                else if (dn === "FORWARD BLDG-03") val = calcDept('fwd', 'b3', ['Ajio']);
-                else if (dn === "FORWARD BLDG-05") val = calcDept('fwd', 'b5', ['Ajio']);
+                else if (dn === "FORWARD BLDG-03") val = calcDept('fwd', 'b3');
+                else if (dn === "FORWARD BLDG-05") val = calcDept('fwd', 'b5');
                 else if (dn === "TAG CHANGE") val = calcDept('tag');
-                else if (dn === "RTV - PICK") val = calcDept('rtv', 'both', ['M2M', 'Cycle Count']);
+                else if (dn === "RTV - PICK") val = calcDept('rtv', 'both');
                 else if (dn === "RTV - PACK") val = null; // merged mapping
-                else if (dn === "PHOTOSHOOT") val = calcDept('photo', 'both', ['Catalogue']);
+                else if (dn === "PHOTOSHOOT") val = calcDept('photo', 'both');
                 else if (dn === "CLAIMS") val = calcDept('claims');
                 else if (dn === "REFINISHING") val = calcDept('refinish');
                 else if (dn === "AJIO SCAN") val = calcTask(['Ajio']);
                 else if (dn === "CATALOUGE" || dn === "CATALOGUE") val = calcTask(['Catalogue']);
                 else if (dn === "QC CHECK") val = calcTask(['QC Checking']);
                 else if (dn === "M2M") val = calcTask(['M2M']);
-                else val = 0; // Default generic mapping for newly added rows
+                else {
+                    // Try to auto-match newly added rows to a department
+                    const matchIdx = manpowerConfig.findIndex(d => dn.includes(d.name.toUpperCase()));
+                    if (matchIdx !== -1) {
+                        let bldg = 'both';
+                        if (dn.includes('-3') || dn.includes(' 3') || dn.includes('03')) bldg = 'b3';
+                        if (dn.includes('-5') || dn.includes(' 5') || dn.includes('05')) bldg = 'b5';
+                        val = calcDept(manpowerConfig[matchIdx].id, bldg);
+                    } else {
+                        val = 0; 
+                    }
+                }
 
                 if (val !== null) {
                     grandTotal += val;
@@ -2567,6 +2610,21 @@
             select.innerHTML = '<option value="">-- Select User --</option><option value="ADMIN_OVERRIDE">** SUPER ADMIN (All Access) **</option>';
             wmsUsers.forEach(u => select.innerHTML += `<option value="${u.name}">${u.name}</option>`);
         }
+
+        function toggleVisibility(subCat) {
+            document.querySelectorAll(`.auth-row-${subCat}`).forEach(row => {
+                row.classList.toggle('hidden');
+            });
+        }
+
+        function toggleAllAuth(subCat, isChecked) {
+            document.querySelectorAll(`.auth-cb-${subCat}`).forEach(cb => {
+                cb.checked = isChecked;
+            });
+            document.querySelectorAll(`.auth-row-${subCat}`).forEach(row => {
+                row.classList.remove('hidden');
+            });
+        }
         
         function buildAuthGrid() {
             const section = document.getElementById('auth-section-select').value;
@@ -2602,13 +2660,14 @@
             
             filteredModules.forEach(mod => {
                 const modName = mod.name.replace(' (Data Entry)', '').replace(' (MIS View)', '');
+                const rowClass = section === 'MIS' ? `auth-row-${mod.subCategory} hidden` : `auth-row-USER`;
                 
-                bldg3Html += `<tr><td class="font-bold border-r-2 border-gray-400 bg-gray-50 text-xs px-4 whitespace-nowrap" style="width: 200px;">${modName}</td>`;
-                dynamicCols.forEach((sc, idx) => { bldg3Html += `<td class="text-center px-2 ${idx===0?'border-l-2 border-gray-400':''}"><input type="checkbox" class="auth-cb" data-mod="${mod.id}" data-bldg="Bldg3" data-sub="${sc}"></td>`; });
+                bldg3Html += `<tr class="${rowClass}"><td class="font-bold border-r-2 border-gray-400 bg-gray-50 text-xs px-4 whitespace-nowrap" style="width: 200px;">${modName}</td>`;
+                dynamicCols.forEach((sc, idx) => { bldg3Html += `<td class="text-center px-2 ${idx===0?'border-l-2 border-gray-400':''}"><input type="checkbox" class="auth-cb auth-cb-${mod.subCategory}" data-mod="${mod.id}" data-bldg="Bldg3" data-sub="${sc}"></td>`; });
                 bldg3Html += `</tr>`;
 
-                bldg5Html += `<tr><td class="font-bold border-r-2 border-gray-400 bg-gray-50 text-xs px-4 whitespace-nowrap" style="width: 200px;">${modName}</td>`;
-                dynamicCols.forEach((sc, idx) => { bldg5Html += `<td class="text-center px-2 ${idx===0?'border-l-2 border-gray-400':''}"><input type="checkbox" class="auth-cb" data-mod="${mod.id}" data-bldg="Bldg5" data-sub="${sc}"></td>`; });
+                bldg5Html += `<tr class="${rowClass}"><td class="font-bold border-r-2 border-gray-400 bg-gray-50 text-xs px-4 whitespace-nowrap" style="width: 200px;">${modName}</td>`;
+                dynamicCols.forEach((sc, idx) => { bldg5Html += `<td class="text-center px-2 ${idx===0?'border-l-2 border-gray-400':''}"><input type="checkbox" class="auth-cb auth-cb-${mod.subCategory}" data-mod="${mod.id}" data-bldg="Bldg5" data-sub="${sc}"></td>`; });
                 bldg5Html += `</tr>`;
             });
             
@@ -2619,10 +2678,24 @@
         function loadUserAuthGrid() {
             buildAuthGrid(); 
             const uname = document.getElementById('auth-user-select').value;
+            const section = document.getElementById('auth-section-select').value;
             const cbs = document.querySelectorAll('.auth-cb');
+            
             document.getElementById('auth-grid-container').classList.remove('hidden');
             
-            if(!uname) { cbs.forEach(cb => cb.checked = false); document.getElementById('auth-grid-container').classList.add('hidden'); return; }
+            const filterContainer = document.getElementById('mis-auth-filters');
+            if (section === 'MIS') {
+                filterContainer.classList.remove('hidden');
+            } else {
+                filterContainer.classList.add('hidden');
+            }
+
+            const chkFile = document.getElementById('chk-all-file');
+            const chkDash = document.getElementById('chk-all-dash');
+            if(chkFile) chkFile.checked = false;
+            if(chkDash) chkDash.checked = false;
+
+            if(!uname) { cbs.forEach(cb => cb.checked = false); document.getElementById('auth-grid-container').classList.add('hidden'); filterContainer.classList.add('hidden'); return; }
             if(uname === "ADMIN_OVERRIDE") { cbs.forEach(cb => cb.checked = true); return; }
 
             const perms = JSON.parse(localStorage.getItem(`auth_${uname}`)) || {};
@@ -2633,28 +2706,42 @@
             document.getElementById('auth-save-msg').classList.add('hidden');
         }
 
-        function saveUserAuthGrid() {
+        function saveAuthData(targetSubCat = null) {
             const uname = document.getElementById('auth-user-select').value;
             if(!uname || uname === "ADMIN_OVERRIDE") { alert("Cannot save for this selection."); return; }
             
             let perms = JSON.parse(localStorage.getItem(`auth_${uname}`)) || {};
             const currentSection = document.getElementById('auth-section-select').value;
             
-            const filteredModules = sidebarModules.filter(m => m.category === currentSection && m.id !== 'dashboard-section' && m.id !== 'data-file-upload');
-            filteredModules.forEach(m => { delete perms[m.id]; });
+            let modulesToProcess = sidebarModules.filter(m => m.category === currentSection && m.id !== 'dashboard-section' && m.id !== 'data-file-upload');
+            if (targetSubCat) {
+                modulesToProcess = modulesToProcess.filter(m => m.subCategory === targetSubCat);
+            }
+
+            // Only delete permissions for the modules we are currently processing
+            modulesToProcess.forEach(m => { delete perms[m.id]; });
 
             document.querySelectorAll('.auth-cb').forEach(cb => {
-                if(cb.checked) {
-                    const mod = cb.dataset.mod; const bldg = cb.dataset.bldg; const sub = cb.dataset.sub;
-                    if(!perms[mod]) perms[mod] = {};
-                    if(!perms[mod][bldg]) perms[mod][bldg] = [];
-                    perms[mod][bldg].push(sub);
+                const modId = cb.dataset.mod;
+                if (modulesToProcess.some(m => m.id === modId)) {
+                    if(cb.checked) {
+                        const bldg = cb.dataset.bldg; 
+                        const sub = cb.dataset.sub;
+                        if(!perms[modId]) perms[modId] = {};
+                        if(!perms[modId][bldg]) perms[modId][bldg] = [];
+                        perms[modId][bldg].push(sub);
+                    }
                 }
             });
+
             saveToDB(`auth_${uname}`, JSON.stringify(perms));
-            document.getElementById('auth-save-msg').classList.remove('hidden');
-            setTimeout(() => document.getElementById('auth-save-msg').classList.add('hidden'), 2000);
-            alert("Action completed successfully! Permissions saved.");
+            
+            const msgEl = document.getElementById('auth-save-msg');
+            msgEl.classList.remove('hidden');
+            msgEl.style.display = 'inline-flex';
+            setTimeout(() => { msgEl.classList.add('hidden'); msgEl.style.display = 'none'; }, 2000);
+            
+            alert("Action completed successfully! Authorizations saved.");
         }
 
         function loadAdminModulesList() {
@@ -2683,7 +2770,7 @@
                 let lockData = '';
                 const adminUnlock = localStorage.getItem(`admin_unlock_${mod.dataKey}_${dateVal}`) === "1";
 
-                if (mod.dataKey === 'target-board-achieve' || mod.dataKey === 'target-board-target' || mod.dataKey === 'dept-pendency' || mod.dataKey === 'manpower') {
+                if (mod.dataKey === 'target-board-achieve') {
                     lockData = localStorage.getItem(`lock_${mod.dataKey}_${dateVal}`);
                     if (lockData) {
                         try {
@@ -2691,18 +2778,29 @@
                             if(Object.keys(lObj).length > 0) isLocked = true;
                         } catch(e) { isLocked = true; }
                     }
+                    if (isPastDate(dateVal, 1) && !adminUnlock) { isLocked = true; }
+                } 
+                else if (mod.dataKey === 'target-board-target' || mod.dataKey === 'dept-pendency' || mod.dataKey === 'manpower') {
+                    lockData = localStorage.getItem(`lock_${mod.dataKey}_${dateVal}`);
+                    if (lockData) {
+                        try {
+                            const lObj = JSON.parse(lockData);
+                            if(Object.keys(lObj).length > 0) isLocked = true;
+                        } catch(e) { isLocked = true; }
+                    }
+                    if (isPastDate(dateVal) && !adminUnlock) { isLocked = true; }
                 } else {
                     lockData = localStorage.getItem(`lock_${mod.dataKey}_${dateVal}`);
                     if (lockData === "1") isLocked = true;
-                }
-
-                // If past date and not explicitly unlocked by admin, it's locked visually
-                if (isPast && !adminUnlock) {
-                    isLocked = true;
+                    if (isPastDate(dateVal) && !adminUnlock) { isLocked = true; }
                 }
                 
+                let lockStatusText = 'Locked (Saved)';
+                if (mod.dataKey === 'target-board-achieve' && isPastDate(dateVal, 1) && !lockData) lockStatusText = 'Locked (Past Date)';
+                else if (mod.dataKey !== 'target-board-achieve' && isPastDate(dateVal) && !lockData) lockStatusText = 'Locked (Past Date)';
+
                 const statusBadge = isLocked 
-                    ? `<span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">${(isPast && !lockData) ? 'Locked (Past Date)' : 'Locked (Saved)'}</span>` 
+                    ? `<span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">${lockStatusText}</span>` 
                     : `<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">Active (Open)</span>`;
                 
                 const btnActivate = isLocked 
@@ -2725,8 +2823,10 @@
         function adminActivateModule(dataKey, dateVal) {
             if(confirm("This will unlock the module so data can be re-entered or re-uploaded. Continue?")) {
                 removeFromDB(`lock_${dataKey}_${dateVal}`);
-                if (isPastDate(dateVal)) {
-                    saveToDB(`admin_unlock_${dataKey}_${dateVal}`, "1");
+                if (dataKey === 'target-board-achieve') {
+                    if (isPastDate(dateVal, 1)) saveToDB(`admin_unlock_${dataKey}_${dateVal}`, "1");
+                } else {
+                    if (isPastDate(dateVal)) saveToDB(`admin_unlock_${dataKey}_${dateVal}`, "1");
                 }
                 loadAdminModulesList();
                 try { checkFormLocks(true); } catch(e) {}
@@ -2750,7 +2850,7 @@
                     removeFromDB(`admin_unlock_${dataKey}_${dateVal}`);
                 }
 
-                alert("Data deleted successfully.");
+                alert("Action completed successfully! Data deleted.");
                 loadAdminModulesList();
                 if(currentDateStr === dateVal || (dataKey.startsWith('target-board') && (dateVal===lastLoadedADate || dateVal===lastLoadedTDate))) {
                     if (dataKey.startsWith('target-board') || dataKey === 'mis-target') { lastLoadedADate = null; lastLoadedTDate = null; }
@@ -2782,7 +2882,7 @@
                 }
                 
                 closeAdminEditor();
-                alert("Data and locks cleared successfully.");
+                alert("Action completed successfully! Data and locks cleared.");
                 loadAdminModulesList();
                 if(currentDateStr === dateStr || dateStr===lastLoadedADate || dateStr===lastLoadedTDate) {
                     if (adminEditingModule.startsWith('target-board') || adminEditingModule === 'mis-target') { lastLoadedADate = null; lastLoadedTDate = null; }
@@ -2894,779 +2994,6 @@
             
             try { handleDateChange(); } catch(e) {}
             alert("Action completed successfully! Modified Data Saved.");
-        }
-
-        // ================= SECTION NAVIGATION =================
-        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('hidden-sidebar'); }
-
-        function toggleNav(groupId, iconId) {
-            const group = document.getElementById(groupId);
-            const icon = document.getElementById(iconId);
-            if(group.style.display === 'none') {
-                group.style.display = 'block';
-                icon.style.transform = 'rotate(90deg)';
-            } else {
-                group.style.display = 'none';
-                icon.style.transform = 'rotate(0deg)';
-            }
-        }
-
-        function hasPerm(mod, bldg, subCat) {
-            if (!userPermissions[mod]) return false;
-            const arr = userPermissions[mod][bldg];
-            if (!arr) return false;
-            if (Array.isArray(arr)) return arr.includes(subCat);
-            if (typeof arr === 'object') return Object.values(arr).includes(subCat);
-            return false;
-        }
-
-        function checkModuleAccess(modId) {
-            if(isAdminMode || (loggedInUser && loggedInUser.name === "ADMIN_OVERRIDE")) return true;
-            const p = userPermissions[modId];
-            if(!p) return false;
-            for(let bldg in p) {
-                if(ensureArray(p[bldg]).length > 0) return true;
-            }
-            return false;
-        }
-
-        function showSection(sectionId, elementRef) {
-            if(sectionId !== 'welcome-screen' && sectionId !== 'dashboard-section' && sectionId !== 'data-file-upload' && !checkModuleAccess(sectionId)) {
-                alert("You are not authorized to use this section.");
-                return; 
-            }
-
-            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-            if(elementRef) elementRef.classList.add('active');
-
-            document.querySelectorAll('.module-section').forEach(sec => sec.style.display = 'none');
-            
-            const dbHeader = document.getElementById('dashboard-global-header');
-            if(dbHeader) { dbHeader.style.display = 'none'; dbHeader.classList.add('hidden'); }
-
-            localStorage.setItem('last_active_section', sectionId);
-
-            if (sectionId === 'dashboard-section') {
-                if(dbHeader) { dbHeader.style.display = 'flex'; dbHeader.classList.remove('hidden'); }
-                
-                const misSections = ['target-board', 'mis-dept-pendency', 'mis-manpower', 'overall-putaway', 'putaway-bldg-wise', 'returns-po'];
-                let shownAny = false;
-                misSections.forEach(id => {
-                    if (checkModuleAccess(id)) {
-                        const targetSec = document.getElementById(id);
-                        if(targetSec) { targetSec.style.display = 'block'; shownAny = true; }
-                    }
-                });
-                if (!shownAny) {
-                    document.getElementById('welcome-screen').style.display = 'block';
-                }
-            } else {
-                const targetSec = document.getElementById(sectionId);
-                if(targetSec) targetSec.style.display = 'block';
-            }
-            
-            if(elementRef) {
-                const pt = document.getElementById('page-title');
-                if(pt) pt.innerText = elementRef.innerText;
-            }
-        }
-
-        function handleDateChange() {
-            const globalDateEl = document.getElementById('global-date');
-            if(!globalDateEl) return;
-            const dateVal = globalDateEl.value;
-            if(!dateVal) return;
-            currentDateStr = dateVal; 
-            const d = new Date(dateVal);
-            const yDate = new Date(d); yDate.setDate(yDate.getDate() - 1);
-            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            
-            const hdToday = document.getElementById('header-today-date');
-            if(hdToday) hdToday.innerText = `${String(d.getDate()).padStart(2,'0')}-${months[d.getMonth()]}`;
-            
-            const hdYest = document.getElementById('header-yesterday-date');
-            if(hdYest) hdYest.innerText = `${String(yDate.getDate()).padStart(2,'0')}-${months[yDate.getMonth()]}`;
-
-            try { checkFormLocks(true); } catch(e) { console.error("Lock error", e); }
-            try { renderReturnsPOTable(); } catch(e) {}
-            try { renderPutawayBldgWiseTable(); } catch(e) {}
-            try { renderOverallPutaway(); } catch(e) {}
-            
-            if(manpowerConfig.length > 0) {
-                manpowerConfig.forEach((dept, dIdx) => {
-                    try { calcManpowerTotal(dIdx); } catch(e) {}
-                });
-            }
-        }
-
-        // ================= AUTH & LOCK LOGIC =================
-        function applySidebarAuth() {
-            let hasMisLinks = false;
-            let hasUserLinks = false;
-            
-            sidebarModules.forEach(mod => {
-                if(mod.category === 'MIS' && mod.id !== 'dashboard-section' && mod.id !== 'data-file-upload' && checkModuleAccess(mod.id)) {
-                    hasMisLinks = true;
-                }
-            });
-            
-            const isUI = (id) => uiControlsState[id] !== false;
-            
-            const uploadLink = document.getElementById('link-file-upload');
-            if (uploadLink) uploadLink.style.display = (hasMisLinks && isUI('link-file-upload')) ? 'block' : 'none';
-
-            const dashLink = document.getElementById('link-dashboard');
-            if (dashLink) dashLink.style.display = (hasMisLinks && isUI('link-dashboard')) ? 'block' : 'none';
-            
-            document.querySelectorAll('#user-nav-group .module-link').forEach(link => {
-                if (checkModuleAccess(link.dataset.mod) && isUI(link.id)) {
-                    link.style.display = 'block';
-                    hasUserLinks = true;
-                } else {
-                    link.style.display = 'none';
-                }
-            });
-            
-            const mh = document.getElementById('mis-heading');
-            if(mh) mh.style.display = hasMisLinks ? 'flex' : 'none';
-            
-            const uh = document.getElementById('user-heading');
-            if(uh) uh.style.display = hasUserLinks ? 'flex' : 'none';
-        }
-
-        function saveMISTarget() {
-            let data = JSON.parse(localStorage.getItem(`data_target-board_${currentDateStr}`)) || {};
-            let hasData = false;
-
-            targetDepts.forEach((dept, i) => {
-                const sDept = sanitizeKey(dept);
-                const input = document.getElementById(`mis-tgt-input-tt-${i}`);
-                if (input && !input.readOnly && !input.disabled && input.closest('tr').style.display !== 'none') {
-                    if(input.value.trim() !== '') {
-                        if (!data[sDept]) data[sDept] = data[i] ? { ...data[i] } : { target: '', achieve: '' };
-                        data[sDept].target = input.value;
-                        hasData = true;
-                    }
-                }
-            });
-
-            if(hasData) {
-                saveToDB(`data_target-board_${currentDateStr}`, JSON.stringify(data));
-                saveToDB(`lock_mis-target_${currentDateStr}`, "1");
-                
-                const alertBox = document.getElementById(`alert-mis-target-success`);
-                if(alertBox) {
-                    alertBox.style.display = 'block';
-                    setTimeout(() => { alertBox.style.display = 'none'; }, 2000);
-                }
-                checkFormLocks();
-                alert("Action completed successfully! Today Target (MIS) saved.");
-            } else {
-                alert("Please enter target data before saving.");
-            }
-        }
-
-        function checkFormLocks(forceDateChange = false) {
-            applySidebarAuth(); 
-            const isSuperAdmin = isAdminMode || (loggedInUser && loggedInUser.name === "ADMIN_OVERRIDE");
-            const isUI = (id) => uiControlsState[id] !== false; // Check global enable/disable state
-
-            const isPastGlobal = isPastDate(currentDateStr);
-
-            // Upload Sections Locks Check
-            const opLocked = localStorage.getItem(`lock_overall-putaway_${currentDateStr}`) === "1";
-            const adminUnlockOp = localStorage.getItem(`admin_unlock_overall-putaway_${currentDateStr}`) === "1";
-            const autoLockOp = isPastGlobal && !adminUnlockOp;
-            const finalOpLocked = opLocked || autoLockOp;
-
-            const pbwLocked = localStorage.getItem(`lock_putaway-bldg-wise_${currentDateStr}`) === "1";
-            const adminUnlockPbw = localStorage.getItem(`admin_unlock_putaway-bldg-wise_${currentDateStr}`) === "1";
-            const autoLockPbw = isPastGlobal && !adminUnlockPbw;
-            const finalPbwLocked = pbwLocked || autoLockPbw;
-
-            const poLocked = localStorage.getItem(`lock_returns-po_${currentDateStr}`) === "1";
-            const adminUnlockPo = localStorage.getItem(`admin_unlock_returns-po_${currentDateStr}`) === "1";
-            const autoLockPo = isPastGlobal && !adminUnlockPo;
-            const finalPoLocked = poLocked || autoLockPo;
-
-            const fileOp = document.getElementById('csv-upload-overall-central');
-            const btnOp = document.getElementById('btn-upload-overall');
-            const msgOp = document.getElementById('msg-lock-overall');
-            if (fileOp) fileOp.disabled = finalOpLocked || !isUI('btn-upload-overall');
-            if (btnOp) btnOp.disabled = finalOpLocked || !isUI('btn-upload-overall');
-            if (msgOp) msgOp.style.display = finalOpLocked ? 'block' : 'none';
-
-            const filePbw = document.getElementById('csv-upload-putaway-central');
-            const btnPbw = document.getElementById('btn-upload-putaway');
-            const msgPbw = document.getElementById('msg-lock-putaway');
-            if (filePbw) filePbw.disabled = finalPbwLocked || !isUI('btn-upload-putaway');
-            if (btnPbw) btnPbw.disabled = finalPbwLocked || !isUI('btn-upload-putaway');
-            if (msgPbw) msgPbw.style.display = finalPbwLocked ? 'block' : 'none';
-
-            const filePo = document.getElementById('csv-upload-po-central');
-            const btnPo = document.getElementById('btn-upload-po');
-            const msgPo = document.getElementById('msg-lock-po');
-            if (filePo) filePo.disabled = finalPoLocked || !isUI('btn-upload-po');
-            if (btnPo) btnPo.disabled = finalPoLocked || !isUI('btn-upload-po');
-            if (msgPo) msgPo.style.display = finalPoLocked ? 'block' : 'none';
-            
-            const btnAll = document.getElementById('btn-upload-all');
-            if (btnAll) btnAll.disabled = (finalOpLocked && finalPbwLocked && finalPoLocked) || !isUI('btn-upload-all');
-
-            const btnClear = document.getElementById('btn-clear-files');
-            if (btnClear) btnClear.disabled = !isUI('btn-clear-files');
-
-            const btnCopy = document.getElementById('btn-copy-text');
-            if (btnCopy) btnCopy.disabled = !isUI('btn-copy-text');
-
-            const btnDownload = document.getElementById('btn-download-excel');
-            if (btnDownload) btnDownload.disabled = !isUI('btn-download-excel');
-
-            const btnPrint = document.getElementById('btn-print-a4');
-            if (btnPrint) btnPrint.disabled = !isUI('btn-print-a4');
-
-            const btnEmail = document.getElementById('btn-email-report');
-            if (btnEmail) btnEmail.disabled = !isUI('btn-email-report');
-
-            // ================= TARGET DASHBOARD (MIS View) =================
-            const yDateObj = new Date(currentDateStr);
-            yDateObj.setDate(yDateObj.getDate() - 1);
-            const yyyy = yDateObj.getFullYear();
-            const mm = String(yDateObj.getMonth() + 1).padStart(2, '0');
-            const dd = String(yDateObj.getDate()).padStart(2, '0');
-            const yDateStr = `${yyyy}-${mm}-${dd}`;
-
-            const misTgtDataToday = JSON.parse(localStorage.getItem(`data_target-board_${currentDateStr}`)) || {};
-            const misTgtDataYest = JSON.parse(localStorage.getItem(`data_target-board_${yDateStr}`)) || {};
-            
-            const misTgtLocked = localStorage.getItem(`lock_mis-target_${currentDateStr}`) === "1";
-            const adminUnlockMIS = localStorage.getItem(`admin_unlock_mis-target_${currentDateStr}`) === "1";
-            const autoLockMIS = isPastGlobal && !adminUnlockMIS;
-            const finalMISLocked = misTgtLocked || autoLockMIS;
-
-            const btnSaveMISTgt = document.getElementById('btn-save-mis-target');
-            if(btnSaveMISTgt) {
-                btnSaveMISTgt.style.display = isUI('mis-edit-target') ? 'block' : 'none';
-                btnSaveMISTgt.disabled = finalMISLocked;
-            }
-
-            const misTbody = document.getElementById('mis-target-tbody');
-            if(misTbody) {
-                const misTargetRows = misTbody.querySelectorAll('tr');
-                
-                let totYt = 0, totYa = 0, totTt = 0;
-
-                targetDepts.forEach((deptName, i) => {
-                    try {
-                        const tr = misTargetRows[i];
-                        if(!tr) return;
-
-                        const sDept = sanitizeKey(deptName);
-                        const tdYestTarget = document.getElementById(`mis-tgt-yt-${i}`);
-                        const tdYestAchieve = document.getElementById(`mis-tgt-ya-${i}`);
-                        const inputTodayTarget = document.getElementById(`mis-tgt-input-tt-${i}`);
-
-                        const ytVal = misTgtDataYest[sDept]?.target ?? misTgtDataYest[i]?.target ?? '';
-                        const yaVal = misTgtDataYest[sDept]?.achieve ?? misTgtDataYest[i]?.achieve ?? '';
-                        const ttVal = misTgtDataToday[sDept]?.target ?? misTgtDataToday[i]?.target ?? '';
-
-                        if(tdYestTarget) tdYestTarget.innerText = ytVal;
-                        if(tdYestAchieve) tdYestAchieve.innerText = yaVal;
-                        if(inputTodayTarget) {
-                            if(forceDateChange || Object.keys(misTgtDataToday).length === 0) {
-                                inputTodayTarget.value = ttVal;
-                            }
-                            if(finalMISLocked || !isUI('mis-edit-target')) {
-                                inputTodayTarget.readOnly = true;
-                                inputTodayTarget.classList.add('locked-input');
-                            } else {
-                                inputTodayTarget.readOnly = false;
-                                inputTodayTarget.classList.remove('locked-input');
-                            }
-                        }
-
-                        totYt += parseInt(ytVal) || 0;
-                        totYa += parseInt(yaVal) || 0;
-                        totTt += parseInt(ttVal) || 0;
-
-                        let b3Auth = false; let b5Auth = false;
-                        if (isSuperAdmin) { 
-                            b3Auth = true; b5Auth = true; 
-                        } else {
-                            const subCat = getBaseDeptName(deptName);
-                            b3Auth = hasPerm('target-board', 'Bldg3', subCat);
-                            b5Auth = hasPerm('target-board', 'Bldg5', subCat);
-                        }
-                        if (deptName.includes("3") || deptName.includes("03")) b5Auth = false;
-                        if (deptName.includes("5") || deptName.includes("05")) b3Auth = false;
-
-                        if(!b3Auth && !b5Auth) tr.style.display = 'none';
-                        else tr.style.display = '';
-                    } catch(e) { console.error(e); }
-                });
-
-                // Set totals
-                const tdYtTot = document.getElementById('mis-tgt-yt-total');
-                const tdYaTot = document.getElementById('mis-tgt-ya-total');
-                const tdTtTot = document.getElementById('mis-tgt-tt-total');
-                if(tdYtTot) tdYtTot.innerText = totYt;
-                if(tdYaTot) tdYaTot.innerText = totYa;
-                if(tdTtTot) tdTtTot.innerText = totTt;
-            }
-
-            // ================= TARGET DASHBOARD (USER ENTRY View) =================
-            const aDateEl = document.getElementById('achieve-date');
-            const tDateEl = document.getElementById('target-date');
-            const aDate = aDateEl ? aDateEl.value : null;
-            const tDate = tDateEl ? tDateEl.value : null;
-
-            const aData = aDate ? JSON.parse(localStorage.getItem(`data_target-board_${aDate}`)) || {} : {};
-            const tData = tDate ? JSON.parse(localStorage.getItem(`data_target-board_${tDate}`)) || {} : {};
-
-            const aLocks = aDate ? JSON.parse(localStorage.getItem(`lock_target-board-achieve_${aDate}`)) || {} : {};
-            const tLocks = tDate ? JSON.parse(localStorage.getItem(`lock_target-board-target_${tDate}`)) || {} : {};
-
-            const isPastA = isPastDate(aDate, 1);
-            const adminUnlockA = localStorage.getItem(`admin_unlock_target-board-achieve_${aDate}`) === "1";
-            const autoLockA = isPastA && !adminUnlockA;
-
-            const isPastT = isPastDate(tDate);
-            const adminUnlockT = localStorage.getItem(`admin_unlock_target-board-target_${tDate}`) === "1";
-            const autoLockT = isPastT && !adminUnlockT;
-
-            const aDateChanged = forceDateChange || (aDate !== lastLoadedADate);
-            const tDateChanged = forceDateChange || (tDate !== lastLoadedTDate);
-            if (aDateChanged) lastLoadedADate = aDate;
-            if (tDateChanged) lastLoadedTDate = tDate;
-
-            // UI Control for showing/hiding Achieve and Target columns
-            const showAchieve = isUI('sec-achieve');
-            const showTarget = isUI('sec-today-target');
-            
-            const headAchieve = document.getElementById('col-head-achieve');
-            const headTarget = document.getElementById('col-head-target');
-            const subheadAchieve = document.getElementById('col-subhead-achieve');
-            const subheadTarget = document.getElementById('col-subhead-target');
-            
-            if(headAchieve) headAchieve.style.display = showAchieve ? '' : 'none';
-            if(subheadAchieve) subheadAchieve.style.display = showAchieve ? '' : 'none';
-            if(headTarget) headTarget.style.display = showTarget ? '' : 'none';
-            if(subheadTarget) subheadTarget.style.display = showTarget ? '' : 'none';
-
-            const userTbody = document.getElementById('user-target-tbody');
-            if(userTbody) {
-                const userTargetRows = userTbody.querySelectorAll('tr');
-                targetDepts.forEach((deptName, i) => {
-                    try {
-                        const tr = userTargetRows[i];
-                        if(!tr) return;
-                        
-                        const sDept = sanitizeKey(deptName);
-                        
-                        const achTd = tr.querySelector('.td-achieve');
-                        const tgtTd = tr.querySelector('.td-target');
-                        if(achTd) achTd.style.display = showAchieve ? '' : 'none';
-                        if(tgtTd) tgtTd.style.display = showTarget ? '' : 'none';
-
-                        const achInput = document.getElementById(`achieve-${i}`);
-                        const tgtInput = document.getElementById(`target-${i}`);
-
-                        let b3Auth = false; let b5Auth = false;
-                        if (isSuperAdmin) { 
-                            b3Auth = true; b5Auth = true; 
-                        } else {
-                            const subCat = getBaseDeptName(deptName);
-                            b3Auth = hasPerm('user-data-entry', 'Bldg3', subCat);
-                            b5Auth = hasPerm('user-data-entry', 'Bldg5', subCat);
-                        }
-                        if (deptName.includes("3") || deptName.includes("03")) b5Auth = false;
-                        if (deptName.includes("5") || deptName.includes("05")) b3Auth = false;
-
-                        if(!b3Auth && !b5Auth) {
-                            tr.style.display = 'none';
-                        } else {
-                            tr.style.display = '';
-                            if(achInput) {
-                                const shouldUpdateA = aDateChanged || aLocks[sDept] || autoLockA || !aDate;
-                                if(shouldUpdateA) { 
-                                    achInput.value = aData[sDept]?.achieve ?? aData[i]?.achieve ?? ''; 
-                                }
-                                if(aLocks[sDept] || autoLockA || !aDate || !showAchieve) { achInput.readOnly = true; achInput.classList.add('locked-input'); }
-                                else { achInput.readOnly = false; achInput.classList.remove('locked-input'); }
-                            }
-                            if(tgtInput) {
-                                const shouldUpdateT = tDateChanged || tLocks[sDept] || autoLockT || !tDate;
-                                if(shouldUpdateT) { 
-                                    tgtInput.value = tData[sDept]?.target ?? tData[i]?.target ?? ''; 
-                                }
-                                if(tLocks[sDept] || autoLockT || !tDate || !showTarget) { tgtInput.readOnly = true; tgtInput.classList.add('locked-input'); }
-                                else { tgtInput.readOnly = false; tgtInput.classList.remove('locked-input'); }
-                            }
-                        }
-                    } catch(e){}
-                });
-            }
-
-            const btnSaveAchieve = document.getElementById('btn-save-achieve');
-            if (btnSaveAchieve) {
-                btnSaveAchieve.disabled = !aDate || autoLockA || !showAchieve;
-                btnSaveAchieve.parentNode.style.display = showAchieve ? 'flex' : 'none';
-            }
-            
-            const btnSaveTargetBtn = document.getElementById('btn-save-target');
-            if (btnSaveTargetBtn) {
-                btnSaveTargetBtn.disabled = !tDate || autoLockT || !showTarget;
-                btnSaveTargetBtn.parentNode.style.display = showTarget ? 'flex' : 'none';
-            }
-
-            // ================= DEPT PENDENCY =================
-            const globalDateChanged = forceDateChange || (currentDateStr !== lastLoadedGlobalDate);
-            if (globalDateChanged) lastLoadedGlobalDate = currentDateStr;
-
-            const adminUnlockPen = localStorage.getItem(`admin_unlock_dept-pendency_${currentDateStr}`) === "1";
-            const autoLockPen = isPastGlobal && !adminUnlockPen;
-
-            const penData = JSON.parse(localStorage.getItem(`data_dept-pendency_${currentDateStr}`)) || {};
-            const penLocks = JSON.parse(localStorage.getItem(`lock_dept-pendency_${currentDateStr}`)) || {};
-
-            const misPenTbody = document.getElementById('mis-pendency-tbody');
-            if(misPenTbody) {
-                const misPenRows = misPenTbody.querySelectorAll('tr');
-                pendencyDepts.forEach((deptName, i) => {
-                    try {
-                        const tr = misPenRows[i];
-                        if(!tr) return;
-
-                        const sDept = sanitizeKey(deptName);
-                        const v3 = penData[`b3_${sDept}`] ?? penData[`b3_${i}`] ?? '';
-                        const v5 = penData[`b5_${sDept}`] ?? penData[`b5_${i}`] ?? '';
-                        const tdV3 = document.getElementById(`mis-pen-b3-${i}`);
-                        const tdV5 = document.getElementById(`mis-pen-b5-${i}`);
-                        const tdTot = document.getElementById(`mis-pen-tot-${i}`);
-                        if(tdV3) tdV3.innerText = v3;
-                        if(tdV5) tdV5.innerText = v5;
-                        if(tdTot) tdTot.innerText = (parseInt(v3)||0) + (parseInt(v5)||0);
-
-                        let b3Auth = false; let b5Auth = false;
-                        if (isSuperAdmin) { 
-                            b3Auth = true; b5Auth = true; 
-                        } else {
-                            const subCat = getBaseDeptName(deptName);
-                            b3Auth = hasPerm('mis-dept-pendency', 'Bldg3', subCat);
-                            b5Auth = hasPerm('mis-dept-pendency', 'Bldg5', subCat);
-                        }
-                        if(!b3Auth && !b5Auth) tr.style.display = 'none';
-                        else tr.style.display = '';
-                    } catch(e){}
-                });
-            }
-
-            const btnSavePen = document.getElementById('btn-save-pendency');
-            if(btnSavePen) btnSavePen.disabled = !currentDateStr || autoLockPen || !isUI('btn-save-pendency');
-            const alertPenSuc = document.getElementById('alert-pendency-success');
-            if(alertPenSuc) alertPenSuc.style.display = 'none';
-
-            const userPenTbody = document.getElementById('user-pendency-tbody');
-            if(userPenTbody) {
-                const userPenRows = userPenTbody.querySelectorAll('tr');
-                pendencyDepts.forEach((deptName, i) => {
-                    try {
-                        const tr = userPenRows[i];
-                        if(!tr) return;
-                        
-                        let b3Auth = false; let b5Auth = false;
-                        if (isSuperAdmin) { 
-                            b3Auth = true; b5Auth = true; 
-                        } else {
-                            const subCat = getBaseDeptName(deptName);
-                            b3Auth = hasPerm('user-dept-pendency', 'Bldg3', subCat);
-                            b5Auth = hasPerm('user-dept-pendency', 'Bldg5', subCat);
-                        }
-                        
-                        const sDept = sanitizeKey(deptName);
-                        const inB3 = document.getElementById(`user-pen-b3-${i}`);
-                        const inB5 = document.getElementById(`user-pen-b5-${i}`);
-                        
-                        if(inB3) { 
-                            if(globalDateChanged || penLocks[`${sDept}_b3`] || autoLockPen || !currentDateStr) {
-                                inB3.value = penData[`b3_${sDept}`] ?? penData[`b3_${i}`] ?? ''; 
-                            }
-                        }
-                        if(inB5) { 
-                            if(globalDateChanged || penLocks[`${sDept}_b5`] || autoLockPen || !currentDateStr) {
-                                inB5.value = penData[`b5_${sDept}`] ?? penData[`b5_${i}`] ?? ''; 
-                            }
-                        }
-                        try { calcUserPendencyTotal(i); } catch(e){}
-
-                        if(!b3Auth && !b5Auth) {
-                            tr.style.display = 'none';
-                        } else {
-                            tr.style.display = ''; 
-                            
-                            if (penLocks[`${sDept}_b3`] || autoLockPen || !currentDateStr) {
-                                if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
-                            } else {
-                                if(b3Auth && inB3) { inB3.readOnly = false; inB3.classList.remove('locked-input'); } 
-                                else if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
-                            }
-
-                            if (penLocks[`${sDept}_b5`] || autoLockPen || !currentDateStr) {
-                                if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
-                            } else {
-                                if(b5Auth && inB5) { inB5.readOnly = false; inB5.classList.remove('locked-input'); } 
-                                else if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
-                            }
-                        }
-                    } catch(e){}
-                });
-            }
-
-            // ================= MANPOWER DASHBOARD =================
-            const adminUnlockMp = localStorage.getItem(`admin_unlock_manpower_${currentDateStr}`) === "1";
-            const autoLockMp = isPastGlobal && !adminUnlockMp;
-
-            const mpData = JSON.parse(localStorage.getItem(`data_manpower_${currentDateStr}`)) || {};
-            const mpLocks = JSON.parse(localStorage.getItem(`lock_manpower_${currentDateStr}`)) || {};
-
-            manpowerConfig.forEach((dept, dIdx) => {
-                let misB3Auth = false, misB5Auth = false;
-                const subCat = getBaseDeptName(dept.name);
-                const sDept = sanitizeKey(dept.name);
-
-                if (isSuperAdmin) { 
-                    misB3Auth = true; misB5Auth = true; 
-                } else {
-                    try {
-                        misB3Auth = hasPerm('mis-manpower', 'Bldg3', subCat);
-                        misB5Auth = hasPerm('mis-manpower', 'Bldg5', subCat);
-                    } catch(e){}
-                }
-                const misCard = document.getElementById(`mis-mp-card-${dIdx}`);
-                if(misCard) {
-                    if(!misB3Auth && !misB5Auth) misCard.style.display = 'none';
-                    else misCard.style.display = 'block';
-                }
-
-                let usrB3Auth = false, usrB5Auth = false;
-                if (isSuperAdmin) { 
-                    usrB3Auth = true; usrB5Auth = true; 
-                } else {
-                    try {
-                        usrB3Auth = hasPerm('user-manpower', 'Bldg3', subCat);
-                        usrB5Auth = hasPerm('user-manpower', 'Bldg5', subCat);
-                    } catch(e){}
-                }
-                const userCard = document.getElementById(`user-mp-card-${dIdx}`);
-                if(userCard) {
-                    if(!usrB3Auth && !usrB5Auth) userCard.style.display = 'none';
-                    else userCard.style.display = 'block';
-                }
-
-                let sumMisB3 = 0, sumMisB5 = 0;
-
-                ensureArray(dept.tasks).forEach((task, tIdx) => {
-                    try {
-                        const sTask = sanitizeKey(task);
-                        const v3 = mpData[`b3_${sDept}_${sTask}`] ?? mpData[`b3_${dIdx}_${tIdx}`] ?? '';
-                        const v5 = mpData[`b5_${sDept}_${sTask}`] ?? mpData[`b5_${dIdx}_${tIdx}`] ?? '';
-                        
-                        sumMisB3 += parseInt(v3) || 0;
-                        sumMisB5 += parseInt(v5) || 0;
-                        
-                        const tdMisB3 = document.getElementById(`mis-mp-b3-${dIdx}-${tIdx}`);
-                        const tdMisB5 = document.getElementById(`mis-mp-b5-${dIdx}-${tIdx}`);
-                        if(tdMisB3) tdMisB3.innerText = v3;
-                        if(tdMisB5) tdMisB5.innerText = v5;
-
-                        const inB3 = document.getElementById(`user-mp-b3-${dIdx}-${tIdx}`);
-                        const inB5 = document.getElementById(`user-mp-b5-${dIdx}-${tIdx}`);
-                        
-                        if(inB3) { 
-                            if(globalDateChanged || mpLocks[`${sDept}_b3`] || autoLockMp || !currentDateStr) {
-                                inB3.value = v3; 
-                            }
-                        }
-                        if(inB5) { 
-                            if(globalDateChanged || mpLocks[`${sDept}_b5`] || autoLockMp || !currentDateStr) {
-                                inB5.value = v5; 
-                            }
-                        }
-
-                        if (mpLocks[`${sDept}_b3`] || autoLockMp || !currentDateStr) {
-                            if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
-                        } else {
-                            if(usrB3Auth && inB3) { inB3.readOnly = false; inB3.classList.remove('locked-input'); } 
-                            else if(inB3) { inB3.readOnly = true; inB3.classList.add('locked-input'); }
-                        }
-
-                        if (mpLocks[`${sDept}_b5`] || autoLockMp || !currentDateStr) {
-                            if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
-                        } else {
-                            if(usrB5Auth && inB5) { inB5.readOnly = false; inB5.classList.remove('locked-input'); } 
-                            else if(inB5) { inB5.readOnly = true; inB5.classList.add('locked-input'); }
-                        }
-
-                    } catch(e){}
-                });
-
-                const misB3Tot = document.getElementById(`mis-mp-tot-b3-${dIdx}`);
-                const misB5Tot = document.getElementById(`mis-mp-tot-b5-${dIdx}`);
-                if(misB3Tot) misB3Tot.innerText = sumMisB3;
-                if(misB5Tot) misB5Tot.innerText = sumMisB5;
-                
-                try { calcManpowerTotal(dIdx); } catch(e){}
-            });
-
-            const alertMpSuc = document.getElementById('alert-manpower-success');
-            if(alertMpSuc) alertMpSuc.style.display = 'none';
-            const btnSaveMp = document.getElementById('btn-save-manpower');
-            if(btnSaveMp) btnSaveMp.disabled = !currentDateStr || autoLockMp || !isUI('btn-save-manpower');
-            
-            updateTargetManpower();
-        }
-
-        // ================= SAVE DATA ENTRY =================
-        function saveUserTarget(type) {
-            const dateEl = document.getElementById(`${type}-date`);
-            const dateStr = dateEl ? dateEl.value : null;
-            
-            if (!dateStr) { 
-                alert(`Please select a date for ${type === 'achieve' ? 'Achieve' : 'Target'} to save.`); 
-                return; 
-            }
-            
-            let data = JSON.parse(localStorage.getItem(`data_target-board_${dateStr}`)) || {};
-            let locks = JSON.parse(localStorage.getItem(`lock_target-board-${type}_${dateStr}`)) || {};
-            let hasData = false;
-
-            targetDepts.forEach((dept, i) => {
-                const sDept = sanitizeKey(dept);
-                const input = document.getElementById(`${type}-${i}`);
-                if (input && !input.readOnly && !input.disabled && input.closest('tr').style.display !== 'none') {
-                    if(input.value.trim() !== '') {
-                        if (!data[sDept]) data[sDept] = data[i] ? { ...data[i] } : { target: '', achieve: '' };
-                        data[sDept][type] = input.value;
-                        locks[sDept] = true;
-                        hasData = true;
-                    }
-                }
-            });
-
-            if(hasData) {
-                saveToDB(`data_target-board_${dateStr}`, JSON.stringify(data));
-                saveToDB(`lock_target-board-${type}_${dateStr}`, JSON.stringify(locks));
-                
-                const alertBox = document.getElementById(`alert-${type}-success`);
-                if(alertBox) {
-                    alertBox.style.display = 'block';
-                    setTimeout(() => { alertBox.style.display = 'none'; }, 2000);
-                }
-                checkFormLocks();
-                alert(`Action completed successfully! ${type === 'achieve' ? 'Achieve' : 'Target'} Data saved.`);
-            } else {
-                alert("You don't have authorization or cannot save empty data!");
-            }
-        }
-
-        function saveUserPendency(e) {
-            e.preventDefault();
-            let hasData = false;
-            let data = JSON.parse(localStorage.getItem(`data_dept-pendency_${currentDateStr}`)) || {};
-            let locks = JSON.parse(localStorage.getItem(`lock_dept-pendency_${currentDateStr}`)) || {};
-            
-            pendencyDepts.forEach((dept, i) => {
-                const sDept = sanitizeKey(dept);
-                const inB3 = document.getElementById(`user-pen-b3-${i}`);
-                const inB5 = document.getElementById(`user-pen-b5-${i}`);
-
-                if(inB3 && !inB3.readOnly && !inB3.disabled && inB3.closest('tr').style.display !== 'none') { 
-                    if(inB3.value.trim() !== '') { 
-                        data[`b3_${sDept}`] = inB3.value; 
-                        hasData=true; 
-                        locks[`${sDept}_b3`] = true; 
-                    }
-                }
-                if(inB5 && !inB5.readOnly && !inB5.disabled && inB5.closest('tr').style.display !== 'none') { 
-                    if(inB5.value.trim() !== '') { 
-                        data[`b5_${sDept}`] = inB5.value; 
-                        hasData=true; 
-                        locks[`${sDept}_b5`] = true; 
-                    }
-                }
-            });
-            
-            if(!hasData) { alert("You don't have authorization or cannot save empty data!"); return; }
-
-            saveToDB(`data_dept-pendency_${currentDateStr}`, JSON.stringify(data));
-            saveToDB(`lock_dept-pendency_${currentDateStr}`, JSON.stringify(locks));
-            const alertBox = document.getElementById('alert-pendency-success');
-            if(alertBox) {
-                alertBox.style.display = 'block';
-                setTimeout(() => { alertBox.style.display = 'none'; }, 2000);
-            }
-            checkFormLocks();
-            alert("Action completed successfully! Pendency Data saved.");
-        }
-
-        function saveUserManpower(e) {
-            e.preventDefault();
-            let hasData = false;
-            let data = JSON.parse(localStorage.getItem(`data_manpower_${currentDateStr}`)) || {};
-            let locks = JSON.parse(localStorage.getItem(`lock_manpower_${currentDateStr}`)) || {};
-
-            manpowerConfig.forEach((dept, dIdx) => {
-                const sDept = sanitizeKey(dept.name);
-                let deptB3Saved = false;
-                let deptB5Saved = false;
-                
-                ensureArray(dept.tasks).forEach((task, tIdx) => {
-                    const sTask = sanitizeKey(task);
-                    const inB3 = document.getElementById(`user-mp-b3-${dIdx}-${tIdx}`);
-                    const inB5 = document.getElementById(`user-mp-b5-${dIdx}-${tIdx}`);
-                    const card = document.getElementById(`user-mp-card-${dIdx}`);
-                    
-                    if(card && card.style.display !== 'none') {
-                        if(inB3 && !inB3.readOnly && !inB3.disabled) { 
-                            if(inB3.value.trim() !== '') { 
-                                data[`b3_${sDept}_${sTask}`] = inB3.value; 
-                                hasData = true; 
-                                deptB3Saved = true; 
-                            }
-                        }
-                        if(inB5 && !inB5.readOnly && !inB5.disabled) { 
-                            if(inB5.value.trim() !== '') { 
-                                data[`b5_${sDept}_${sTask}`] = inB5.value; 
-                                hasData = true; 
-                                deptB5Saved = true; 
-                            }
-                        }
-                    }
-                });
-                if (deptB3Saved) locks[`${sDept}_b3`] = true;
-                if (deptB5Saved) locks[`${sDept}_b5`] = true;
-            });
-
-            if(!hasData) { alert("You don't have authorization or cannot save empty data!"); return; }
-            
-            saveToDB(`data_manpower_${currentDateStr}`, JSON.stringify(data));
-            saveToDB(`lock_manpower_${currentDateStr}`, JSON.stringify(locks));
-            const alertBox = document.getElementById('alert-manpower-success');
-            if(alertBox) {
-                alertBox.style.display = 'block';
-                setTimeout(() => { alertBox.style.display = 'none'; }, 2000);
-            }
-            checkFormLocks();
-            alert("Action completed successfully! Manpower Data saved.");
-        }
-
-        function calcUserPendencyTotal(i) {
-            const elTot = document.getElementById(`user-pen-tot-${i}`);
-            const elB3 = document.getElementById(`user-pen-b3-${i}`);
-            const elB5 = document.getElementById(`user-pen-b5-${i}`);
-            if(elTot && elB3 && elB5) {
-                elTot.innerText = (parseInt(elB3.value)||0) + (parseInt(elB5.value)||0);
-            }
         }
     </script>
 </body>
