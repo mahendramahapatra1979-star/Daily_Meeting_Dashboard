@@ -1345,8 +1345,7 @@
             if(b3TotEl) b3TotEl.innerText = sumB3 > 0 ? sumB3 : '';
             if(b5TotEl) b5TotEl.innerText = sumB5 > 0 ? sumB5 : '';
         }
-
-        // Dashboard manpower dynamic population based on requested logic
+// Dashboard manpower dynamic population based on requested logic
         function updateTargetManpower() {
             const mpData = JSON.parse(localStorage.getItem(`data_manpower_${currentDateStr}`)) || {};
             
@@ -1392,8 +1391,13 @@
                 else if (dn === "PUTAWAY-3") val = calcDept('putaway', 'b3', ['Cycle Count', 'QC Checking']);
                 else if (dn === "PUTAWAY-5") val = calcDept('putaway', 'b5', ['Cycle Count', 'QC Checking']);
                 else if (dn === "CYCLE COUNT") val = calcTask(['Cycle Count']);
-                else if (dn === "FORWARD BLDG-03") val = calcDept('fwd', 'b3', ['Ajio']);
-                else if (dn === "FORWARD BLDG-05") val = calcDept('fwd', 'b5', ['Ajio']);
+                
+                // FIX 1: Broadened Forward matching to catch any naming variations
+                else if (dn.startsWith("FORWARD")) {
+                    let bldgFlag = dn.includes("5") ? 'b5' : (dn.includes("3") ? 'b3' : 'both');
+                    val = calcDept('fwd', bldgFlag, ['Ajio']);
+                }
+                
                 else if (dn === "TAG CHANGE") val = calcDept('tag');
                 else if (dn === "RTV - PICK") val = calcDept('rtv', 'both', ['M2M', 'Cycle Count']);
                 else if (dn === "RTV - PACK") val = null; // merged mapping
@@ -1404,7 +1408,23 @@
                 else if (dn === "CATALOUGE" || dn === "CATALOGUE") val = calcTask(['Catalogue']);
                 else if (dn === "QC CHECK") val = calcTask(['QC Checking']);
                 else if (dn === "M2M") val = calcTask(['M2M']);
-                else val = 0; // Default generic mapping for newly added rows
+                else {
+                    // FIX 2: Dynamic mapping for newly added custom rows (e.g., "Other brand")
+                    let baseTargetName = getBaseDeptName(deptName);
+                    let matchedDept = manpowerConfig.find(d => 
+                        getBaseDeptName(d.name).toUpperCase() === baseTargetName || 
+                        d.name.toUpperCase().trim() === dn
+                    );
+                    
+                    if (matchedDept) {
+                        let bldgFlag = 'both';
+                        if (dn.includes('3')) bldgFlag = 'b3';
+                        else if (dn.includes('5')) bldgFlag = 'b5';
+                        val = calcDept(matchedDept.id, bldgFlag);
+                    } else {
+                        val = 0; 
+                    }
+                }
 
                 if (val !== null) {
                     grandTotal += val;
@@ -1416,8 +1436,7 @@
             const totCell = document.getElementById(`mis-tgt-mp-total`);
             if (totCell) totCell.innerText = grandTotal > 0 ? grandTotal : '';
         }
-
-        // ================= CORE DASHBOARD INITIALIZATION =================
+       
         function initDashboard() {
             buildTargetTables();
             buildPendencyTables();
