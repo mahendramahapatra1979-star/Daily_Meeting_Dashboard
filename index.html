@@ -1809,8 +1809,11 @@
                     if (dateColIndex === -1) dateColIndex = 7; 
 
                     const globalDateObj = new Date(currentDateStr);
-                    const minTs = new Date(globalDateObj.getFullYear(), globalDateObj.getMonth(), globalDateObj.getDate()).getTime();
-                    const maxTs = minTs + ((uploadExclusionConfig.days || 10) * 24 * 60 * 60 * 1000);
+                    // FIX: Set minTs to (Global Date - Day Range) and maxTs to (Global Date + Day Range)
+                    const daysOffset = uploadExclusionConfig.days || 10;
+                    const minTs = new Date(globalDateObj.getFullYear(), globalDateObj.getMonth(), globalDateObj.getDate() - daysOffset).getTime();
+                    const maxTs = new Date(globalDateObj.getFullYear(), globalDateObj.getMonth(), globalDateObj.getDate() + daysOffset).getTime();
+                    
                     const ignoredStatusesUpper = uploadExclusionConfig.statuses.map(s => s.toUpperCase());
 
                     for (let i = 1; i < rows.length; i++) {
@@ -1829,7 +1832,6 @@
                                 if ((bldgStr.includes('BLDG5') || bldgStr.includes('BLDG 5') || bldgStr === '5') && uploadExclusionConfig.b5) bldgMatch = true;
                                 
                                 // If CSV doesn't differentiate building but we have rules, we might want to check if ANY rule applies.
-                                // But safely, if bldgStr is empty, we assume it matches if any box is ticked.
                                 if (!bldgStr && (uploadExclusionConfig.b3 || uploadExclusionConfig.b5)) bldgMatch = true;
 
                                 if (bldgMatch) {
@@ -1888,8 +1890,10 @@
                     const dashY = dashDateObj.getFullYear();
                     const mNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-                    const minTs = new Date(dashDateObj.getFullYear(), dashDateObj.getMonth(), dashDateObj.getDate()).getTime();
-                    const maxTs = minTs + ((uploadExclusionConfig.days || 10) * 24 * 60 * 60 * 1000);
+                    // FIX: Correct minTs and maxTs to cover past days properly
+                    const daysOffset = uploadExclusionConfig.days || 10;
+                    const minTs = new Date(dashDateObj.getFullYear(), dashDateObj.getMonth(), dashDateObj.getDate() - daysOffset).getTime();
+                    const maxTs = new Date(dashDateObj.getFullYear(), dashDateObj.getMonth(), dashDateObj.getDate() + daysOffset).getTime();
                     const ignoredStatusesUpper = uploadExclusionConfig.statuses.map(s => s.toUpperCase());
 
                     for (let i = 1; i < rows.length; i++) {
@@ -1909,6 +1913,9 @@
                                 let bldgMatch = false;
                                 if ((bldgStr.includes('BLDG3') || bldgStr.includes('BLDG 3') || bldgStr === '3') && uploadExclusionConfig.b3) bldgMatch = true;
                                 if ((bldgStr.includes('BLDG5') || bldgStr.includes('BLDG 5') || bldgStr === '5') && uploadExclusionConfig.b5) bldgMatch = true;
+
+                                // FIX: Added fallback for blank building strings matching overall logic
+                                if (!bldgStr && (uploadExclusionConfig.b3 || uploadExclusionConfig.b5)) bldgMatch = true;
 
                                 if (bldgMatch && parsedDateObj.ts >= minTs && parsedDateObj.ts <= maxTs) {
                                     shouldIgnore = true;
